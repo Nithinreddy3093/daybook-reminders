@@ -4,6 +4,7 @@ import { Bell, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { tasksQuery, memoriesQuery, fmtWhen } from "@/lib/data";
 import { AiSuggest } from "@/components/AiSuggest";
 import { QuickAdd } from "@/components/QuickAdd";
+import { DailyBriefing } from "@/components/DailyBriefing";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -41,6 +42,7 @@ function HomePage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">{greet}</h1>
       <QuickAdd />
+      <DailyBriefing tasks={tasks} />
       <div className="grid gap-4 md:grid-cols-3">
         <Link to="/plans" className="rounded-2xl border p-5 transition hover:bg-muted">
           <CheckCircle2 className="h-5 w-5" />

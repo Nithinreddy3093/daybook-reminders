@@ -2,7 +2,9 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
-import { Home, ListChecks, Image as ImageIcon, LogOut, Bell, Plus, X } from "lucide-react";
+import { Home, ListChecks, Image as ImageIcon, User, Bell, Plus, X } from "lucide-react";
+import { toggleTask } from "@/lib/tasks";
+import { applyTheme, readTheme } from "@/lib/theme";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery } from "@/lib/data";
@@ -11,10 +13,12 @@ const nav = [
   { to: "/home", label: "Home", icon: Home },
   { to: "/plans", label: "Plans", icon: ListChecks },
   { to: "/memories", label: "Memories", icon: ImageIcon },
+  { to: "/profile", label: "Profile", icon: User },
 ] as const;
 
 function ReminderWatcher() {
   const { data: tasks } = useQuery(tasksQuery);
+  const qc = useQueryClient();
   const fired = useRef<Set<string>>(new Set());
   useEffect(() => {
     const check = () => {
@@ -24,7 +28,23 @@ function ReminderWatcher() {
         const at = new Date(t.remind_at).getTime();
         if (at <= now && now - at < 1000 * 60 * 60 * 12) {
           fired.current.add(t.id);
-          toast(`⏰ ${t.title}`, { description: "Reminder" });
+          const snooze = async (min: number) => {
+            await supabase.from("tasks").update({ remind_at: new Date(Date.now() + min * 60000).toISOString() }).eq("id", t.id);
+            fired.current.delete(t.id);
+            qc.invalidateQueries({ queryKey: ["tasks"] });
+            toast(`Snoozed ${min >= 60 ? min / 60 + "h" : min + "m"}`);
+          };
+          toast(`⏰ ${t.title}`, {
+            description: (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button className="rounded-full border px-3 py-1 text-xs" onClick={() => snooze(15)}>Snooze 15m</button>
+                <button className="rounded-full border px-3 py-1 text-xs" onClick={() => snooze(60)}>Snooze 1h</button>
+                <button className="rounded-full bg-primary px-3 py-1 text-xs text-primary-foreground"
+                  onClick={async () => { await toggleTask(t); qc.invalidateQueries({ queryKey: ["tasks"] }); toast("Marked done ✓"); }}>Done</button>
+              </div>
+            ),
+            duration: 60000,
+          });
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification("Reminder", { body: t.title, icon: "/icon-512.png" });
           }
@@ -34,19 +54,12 @@ function ReminderWatcher() {
     check();
     const id = setInterval(check, 20000);
     return () => clearInterval(id);
-  }, [tasks]);
+  }, [tasks, qc]);
   return null;
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
-  const qc = useQueryClient();
-  const signOut = async () => {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  };
+  useEffect(() => { applyTheme(readTheme()); }, []);
   const askNotify = async () => {
     if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
     const p = await Notification.requestPermission();
@@ -77,9 +90,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button onClick={askNotify} aria-label="Enable notifications" className="rounded-full p-2 hover:bg-muted">
               <Bell className="h-5 w-5" />
             </button>
-            <button onClick={signOut} aria-label="Sign out" className="rounded-full p-2 hover:bg-muted">
-              <LogOut className="h-5 w-5" />
-            </button>
+            <Link to="/profile" aria-label="Profile" className="rounded-full p-2 hover:bg-muted md:hidden">
+              <User className="h-5 w-5" />
+            </Link>
           </div>
         </div>
       </header>
