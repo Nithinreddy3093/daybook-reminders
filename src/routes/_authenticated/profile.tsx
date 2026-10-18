@@ -27,8 +27,13 @@ const profileQuery = {
   queryKey: ["profile"],
   queryFn: async () => {
     const { data: u } = await supabase.auth.getUser();
-    const { data } = await supabase.from("profiles").select("*").eq("id", u.user!.id).maybeSingle();
-    return { id: u.user!.id, email: u.user!.email ?? "", display_name: data?.display_name ?? "", bio: data?.bio ?? "" };
+    const id = u.user!.id;
+    const [{ data }, { count: followers }, { count: following }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", id),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", id),
+    ]);
+    return { id, email: u.user!.email ?? "", display_name: data?.display_name ?? "", bio: data?.bio ?? "", username: data?.username ?? "", followers: followers ?? 0, following: following ?? 0 };
   },
 };
 

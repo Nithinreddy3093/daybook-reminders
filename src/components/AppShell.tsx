@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
-import { Home, ListChecks, Image as ImageIcon, User, Bell, Plus, X } from "lucide-react";
+import { Home, ListChecks, Image as ImageIcon, User, Bell, Plus, X, Search } from "lucide-react";
 import { toggleTask } from "@/lib/tasks";
 import { applyTheme, readTheme } from "@/lib/theme";
 import { toast } from "sonner";
@@ -87,6 +87,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="flex items-center gap-1">
+            <Link to="/friends" aria-label="Find friends" className="rounded-full p-2 hover:bg-muted">
+              <Search className="h-5 w-5" />
+            </Link>
             <button onClick={askNotify} aria-label="Enable notifications" className="rounded-full p-2 hover:bg-muted">
               <Bell className="h-5 w-5" />
             </button>
