@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Bell, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
@@ -108,12 +108,18 @@ function ProfilePage() {
             <span><b>{stats.memories}</b> memories</span>
             <span><b>{stats.streak}</b> day streak</span>
           </div>
+          <Link to="/friends" className="mt-1 flex gap-5 text-sm">
+            <span><b>{profile?.followers ?? 0}</b> followers</span>
+            <span><b>{profile?.following ?? 0}</b> following</span>
+          </Link>
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border p-5">
         <h2 className="font-semibold">About you</h2>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Display name" maxLength={60}
+          className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username (so friends can find you)" maxLength={24}
           className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short bio" maxLength={200} rows={2}
           className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
