@@ -3,6 +3,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Bell, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { tasksQuery, memoriesQuery, fmtWhen } from "@/lib/data";
 import { AiSuggest } from "@/components/AiSuggest";
+import { QuickAdd } from "@/components/QuickAdd";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -27,12 +28,19 @@ function HomePage() {
     .filter((t) => t.remind_at && new Date(t.remind_at).getTime() > Date.now())
     .sort((a, b) => +new Date(a.remind_at!) - +new Date(b.remind_at!))[0];
   const pics = memories.filter((m) => m.file_type?.startsWith("image/")).slice(0, 6);
+  const weekAgo = Date.now() - 7 * 864e5;
+  const doneWeek = tasks.filter((t) => t.done && +new Date(t.created_at) > weekAgo).length;
+  const momentsWeek = memories.filter((m) => +new Date(m.created_at) > weekAgo).length;
+  const dayKeys = new Set(memories.map((m) => new Date(m.created_at).toDateString()));
+  let streak = 0;
+  for (let d = new Date(); dayKeys.has(d.toDateString()); d.setDate(d.getDate() - 1)) streak++;
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">{greet}</h1>
+      <QuickAdd />
       <div className="grid gap-4 md:grid-cols-3">
         <Link to="/plans" className="rounded-2xl border p-5 transition hover:bg-muted">
           <CheckCircle2 className="h-5 w-5" />
@@ -49,6 +57,15 @@ function HomePage() {
           <p className="mt-4 text-4xl font-bold font-display">{memories.length}</p>
           <p className="text-sm text-muted-foreground">memories saved</p>
         </Link>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[[doneWeek, "done this week"], [momentsWeek, "moments this week"], [streak, "day memory streak 🔥"]].map(([n, l]) => (
+          <div key={String(l)} className="rounded-2xl bg-muted p-4">
+            <p className="font-display text-2xl font-bold">{n}</p>
+            <p className="text-xs text-muted-foreground">{l}</p>
+          </div>
+        ))}
       </div>
 
       <AiSuggest />
