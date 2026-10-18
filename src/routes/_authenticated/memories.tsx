@@ -36,13 +36,13 @@ function MemoriesPage() {
       const { data: u } = await supabase.auth.getUser();
       file_path = `${u.user!.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
       const { error } = await supabase.storage.from("uploads").upload(file_path, file, { contentType: file.type });
-      if (error) { setBusy(false); return toast.error(error.message); }
+      if (error) { setBusy(false); toast.error(error.message); return; }
     }
     const { error } = await supabase.from("memories").insert({
       caption: caption.trim() || null, file_path, file_name: file?.name ?? null, file_type: file?.type || null,
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setCaption(""); setFile(null);
     if (fileRef.current) fileRef.current.value = "";
     qc.invalidateQueries({ queryKey: ["memories"] });

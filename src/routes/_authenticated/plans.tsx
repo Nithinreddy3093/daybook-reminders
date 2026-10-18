@@ -35,7 +35,7 @@ function PlansPage() {
       due_at: due ? new Date(due).toISOString() : null,
       remind_at: remind ? new Date(remind).toISOString() : null,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setTitle(""); setDue(""); setRemind("");
     refresh();
   };

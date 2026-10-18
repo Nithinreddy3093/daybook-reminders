@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     navigate({ to: "/auth", replace: true });
   };
   const askNotify = async () => {
-    if (!("Notification" in window)) return toast.error("Notifications aren't supported on this device");
+    if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
     const p = await Notification.requestPermission();
     toast(p === "granted" ? "Notifications on" : "Notifications blocked");
   };
