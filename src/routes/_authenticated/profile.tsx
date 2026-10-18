@@ -45,12 +45,13 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [username, setUsername] = useState("");
   const [theme, setTheme] = useState<Theme>("light");
   const [perm, setPerm] = useState<string>("default");
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => { setTheme(readTheme()); setPerm("Notification" in window ? Notification.permission : "unsupported"); }, []);
-  useEffect(() => { if (profile) { setName(profile.display_name); setBio(profile.bio); } }, [profile]);
+  useEffect(() => { if (profile) { setName(profile.display_name); setBio(profile.bio); setUsername(profile.username); } }, [profile]);
 
   const stats = {
     doneTasks: tasks.filter((t) => t.done).length,
@@ -61,8 +62,10 @@ function ProfilePage() {
 
   const save = async () => {
     if (!profile) return;
-    const { error } = await supabase.from("profiles").upsert({ id: profile.id, display_name: name.trim().slice(0, 60), bio: bio.trim().slice(0, 200), updated_at: new Date().toISOString() });
-    if (error) { toast.error(error.message); return; }
+    const un = username.trim().toLowerCase();
+    if (un && !/^[a-z0-9_.]{3,24}$/.test(un)) { toast.error("Username: 3–24 letters, numbers, _ or ."); return; }
+    const { error } = await supabase.from("profiles").upsert({ id: profile.id, display_name: name.trim().slice(0, 60), username: un || null, bio: bio.trim().slice(0, 200), updated_at: new Date().toISOString() });
+    if (error) { toast.error(error.code === "23505" ? "That username is taken" : error.message); return; }
     qc.invalidateQueries({ queryKey: ["profile"] });
     toast("Profile saved");
   };
