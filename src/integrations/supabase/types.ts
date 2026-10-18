@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      memories: {
+        Row: {
+          caption: string | null
+          created_at: string
+          file_name: string | null
+          file_path: string | null
+          file_type: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          user_id?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_type?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          created_at: string
+          done: boolean
+          due_at: string | null
+          id: string
+          notes: string | null
+          remind_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          remind_at?: string | null
+          title: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          remind_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
