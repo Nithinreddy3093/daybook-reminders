@@ -18,59 +18,74 @@ export type Database = {
         Row: {
           caption: string | null
           created_at: string
+          favorite: boolean
           file_name: string | null
           file_path: string | null
           file_type: string | null
           id: string
+          tags: string[]
           user_id: string
         }
         Insert: {
           caption?: string | null
           created_at?: string
+          favorite?: boolean
           file_name?: string | null
           file_path?: string | null
           file_type?: string | null
           id?: string
+          tags?: string[]
           user_id?: string
         }
         Update: {
           caption?: string | null
           created_at?: string
+          favorite?: boolean
           file_name?: string | null
           file_path?: string | null
           file_type?: string | null
           id?: string
+          tags?: string[]
           user_id?: string
         }
         Relationships: []
       }
       tasks: {
         Row: {
+          category: string | null
           created_at: string
           done: boolean
           due_at: string | null
           id: string
           notes: string | null
+          priority: string
+          recurrence: string
           remind_at: string | null
           title: string
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           done?: boolean
           due_at?: string | null
           id?: string
           notes?: string | null
+          priority?: string
+          recurrence?: string
           remind_at?: string | null
           title: string
           user_id?: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           done?: boolean
           due_at?: string | null
           id?: string
           notes?: string | null
+          priority?: string
+          recurrence?: string
           remind_at?: string | null
           title?: string
           user_id?: string

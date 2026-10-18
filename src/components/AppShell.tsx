@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, type ReactNode } from "react";
-import { Home, ListChecks, Image as ImageIcon, LogOut, Bell } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { QuickAdd } from "@/components/QuickAdd";
+import { Home, ListChecks, Image as ImageIcon, LogOut, Bell, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery } from "@/lib/data";
@@ -83,6 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
+      <QuickCapture />
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden">
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
           {nav.map((n) => (
@@ -100,5 +102,31 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
     </div>
+  );
+}
+
+function QuickCapture() {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  return (
+    <>
+      <button onClick={() => setOpen(true)} aria-label="Quick capture"
+        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-brand text-primary-foreground shadow-lg md:bottom-8 md:right-8">
+        <Plus className="h-7 w-7" />
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 md:items-center" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-lg space-y-4 rounded-t-3xl bg-background p-5 md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <p className="font-display text-lg font-bold">Quick capture</p>
+              <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-full p-1.5 hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+            <QuickAdd autoFocus onDone={() => setOpen(false)} />
+            <button onClick={() => { setOpen(false); navigate({ to: "/memories" }); }}
+              className="w-full rounded-full border py-2 text-sm font-medium hover:bg-muted">Save a photo, file or note instead</button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
