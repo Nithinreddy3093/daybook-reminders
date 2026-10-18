@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Bell, Plus, Trash2, Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Bell, Plus, Trash2, Check, Repeat, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery, fmtWhen } from "@/lib/data";
+import { CATEGORIES, PRIORITIES, RECURRENCES, priorityStyle, toggleTask, type Task } from "@/lib/tasks";
+import { QuickAdd } from "@/components/QuickAdd";
 
 export const Route = createFileRoute("/_authenticated/plans")({
   head: () => ({
@@ -19,78 +21,186 @@ export const Route = createFileRoute("/_authenticated/plans")({
   component: PlansPage,
 });
 
+const FILTERS = ["All", "Today", "Upcoming", "Done"] as const;
+const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+
 function PlansPage() {
   const { data: tasks } = useSuspenseQuery(tasksQuery);
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [remind, setRemind] = useState("");
+  const [priority, setPriority] = useState<string>("normal");
+  const [category, setCategory] = useState("");
+  const [recurrence, setRecurrence] = useState<string>("none");
+  const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [view, setView] = useState<"list" | "week">("list");
+  const [cat, setCat] = useState("");
   const refresh = () => qc.invalidateQueries({ queryKey: ["tasks"] });
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     const { error } = await supabase.from("tasks").insert({
-      title: title.trim(),
+      title: title.trim(), priority, recurrence, category: category || null,
       due_at: due ? new Date(due).toISOString() : null,
       remind_at: remind ? new Date(remind).toISOString() : null,
     });
     if (error) { toast.error(error.message); return; }
-    setTitle(""); setDue(""); setRemind("");
+    setTitle(""); setDue(""); setRemind(""); setPriority("normal"); setCategory(""); setRecurrence("none");
     refresh();
   };
-  const toggle = async (id: string, done: boolean) => {
-    await supabase.from("tasks").update({ done: !done }).eq("id", id);
-    refresh();
-  };
-  const remove = async (id: string) => {
-    await supabase.from("tasks").delete().eq("id", id);
-    refresh();
-  };
+  const toggle = async (t: Task) => { await toggleTask(t); refresh(); };
+  const remove = async (id: string) => { await supabase.from("tasks").delete().eq("id", id); refresh(); };
+
+  const filtered = useMemo(() => {
+    const now = new Date();
+    const rank = { high: 0, medium: 1, normal: 2 } as Record<string, number>;
+    return tasks
+      .filter((t) => !cat || t.category === cat)
+      .filter((t) => {
+        if (filter === "Done") return t.done;
+        if (filter === "Today") return !t.done && t.due_at && sameDay(new Date(t.due_at), now);
+        if (filter === "Upcoming") return !t.done && t.due_at && new Date(t.due_at) > now;
+        return true;
+      })
+      .sort((a, b) => Number(a.done) - Number(b.done) || rank[a.priority] - rank[b.priority]);
+  }, [tasks, filter, cat]);
+
+  const usedCats = Array.from(new Set(tasks.map((t) => t.category).filter(Boolean))) as string[];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h1 className="text-3xl font-bold">Plans</h1>
-      <form onSubmit={add} className="space-y-3 rounded-2xl border p-4">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What do you want to do?"
-          className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground" />
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <label className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
-            Due <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className="bg-transparent outline-none" />
-          </label>
-          <label className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
-            <Bell className="h-3.5 w-3.5" /> <input type="datetime-local" value={remind} onChange={(e) => setRemind(e.target.value)} className="bg-transparent outline-none" />
-          </label>
-          <button className="ml-auto flex items-center gap-1 rounded-full bg-gradient-brand px-4 py-1.5 text-sm font-semibold text-primary-foreground">
-            <Plus className="h-4 w-4" /> Add
-          </button>
+    <div className="mx-auto max-w-3xl space-y-5">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Plans</h1>
+        <div className="flex rounded-full border p-1">
+          <button onClick={() => setView("list")} aria-label="List view" className={`rounded-full p-1.5 ${view === "list" ? "bg-muted" : ""}`}><List className="h-4 w-4" /></button>
+          <button onClick={() => setView("week")} aria-label="Week view" className={`rounded-full p-1.5 ${view === "week" ? "bg-muted" : ""}`}><CalendarDays className="h-4 w-4" /></button>
         </div>
-      </form>
+      </div>
 
-      {tasks.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">No plans yet. Add your first one above.</p>
-      ) : (
-        <ul className="divide-y rounded-2xl border">
-          {tasks.map((t) => (
-            <li key={t.id} className="group flex items-center gap-3 px-4 py-3">
-              <button onClick={() => toggle(t.id, t.done)} aria-label="Toggle done"
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? "border-transparent bg-gradient-brand text-primary-foreground" : ""}`}>
-                {t.done && <Check className="h-3.5 w-3.5" />}
-              </button>
-              <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm ${t.done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
-                <p className="flex gap-3 text-xs text-muted-foreground">
-                  {t.due_at && <span>Due {fmtWhen(t.due_at)}</span>}
-                  {t.remind_at && <span className="flex items-center gap-1"><Bell className="h-3 w-3" />{fmtWhen(t.remind_at)}</span>}
-                </p>
-              </div>
-              <button onClick={() => remove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-muted md:opacity-0 md:group-hover:opacity-100">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
+      <QuickAdd />
+      <button onClick={() => setShowForm((s) => !s)} className="text-xs font-medium text-muted-foreground underline-offset-4 hover:underline">
+        {showForm ? "Hide detailed form" : "Or add with details"}
+      </button>
+
+      {showForm && (
+        <form onSubmit={add} className="space-y-3 rounded-2xl border p-4">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What do you want to do?"
+            className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground" />
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <label className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
+              Due <input type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} className="bg-transparent outline-none" />
+            </label>
+            <label className="flex items-center gap-2 rounded-full bg-muted px-3 py-1.5">
+              <Bell className="h-3.5 w-3.5" /> <input type="datetime-local" value={remind} onChange={(e) => setRemind(e.target.value)} className="bg-transparent outline-none" />
+            </label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} className="rounded-full bg-muted px-3 py-1.5 capitalize outline-none">
+              {PRIORITIES.map((p) => <option key={p} value={p}>{p} priority</option>)}
+            </select>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className="rounded-full bg-muted px-3 py-1.5 outline-none">
+              <option value="">No category</option>
+              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+            </select>
+            <select value={recurrence} onChange={(e) => setRecurrence(e.target.value)} className="rounded-full bg-muted px-3 py-1.5 capitalize outline-none">
+              {RECURRENCES.map((r) => <option key={r} value={r}>{r === "none" ? "Doesn't repeat" : r}</option>)}
+            </select>
+            <button className="ml-auto flex items-center gap-1 rounded-full bg-gradient-brand px-4 py-1.5 text-sm font-semibold text-primary-foreground">
+              <Plus className="h-4 w-4" /> Add
+            </button>
+          </div>
+        </form>
       )}
+
+      {view === "list" ? (
+        <>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {FILTERS.map((f) => (
+              <button key={f} onClick={() => setFilter(f)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ${filter === f ? "bg-foreground text-background" : "bg-muted"}`}>{f}</button>
+            ))}
+            {usedCats.map((c) => (
+              <button key={c} onClick={() => setCat(cat === c ? "" : c)} className={`shrink-0 rounded-full border px-3 py-1.5 text-sm ${cat === c ? "border-foreground" : ""}`}>#{c}</button>
+            ))}
+          </div>
+          {filtered.length === 0 ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">Nothing here yet.</p>
+          ) : (
+            <ul className="divide-y rounded-2xl border">
+              {filtered.map((t) => <TaskRow key={t.id} t={t} onToggle={toggle} onRemove={remove} />)}
+            </ul>
+          )}
+        </>
+      ) : (
+        <WeekView tasks={tasks} onToggle={toggle} />
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ t, onToggle, onRemove }: { t: Task; onToggle: (t: Task) => void; onRemove: (id: string) => void }) {
+  return (
+    <li className="group flex items-center gap-3 px-4 py-3">
+      <button onClick={() => onToggle(t)} aria-label="Toggle done"
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? "border-transparent bg-gradient-brand text-primary-foreground" : ""}`}>
+        {t.done && <Check className="h-3.5 w-3.5" />}
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-sm ${t.done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {t.priority !== "normal" && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${priorityStyle[t.priority]}`}>{t.priority}</span>}
+          {t.category && <span>#{t.category}</span>}
+          {t.due_at && <span>Due {fmtWhen(t.due_at)}</span>}
+          {t.remind_at && <span className="flex items-center gap-1"><Bell className="h-3 w-3" />{fmtWhen(t.remind_at)}</span>}
+          {t.recurrence !== "none" && <span className="flex items-center gap-1 capitalize"><Repeat className="h-3 w-3" />{t.recurrence}</span>}
+        </p>
+      </div>
+      <button onClick={() => onRemove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-muted md:opacity-0 md:group-hover:opacity-100">
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </li>
+  );
+}
+
+function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => void }) {
+  const [offset, setOffset] = useState(0);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7) + offset * 7);
+  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
+  const today = new Date();
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setOffset(offset - 1)} aria-label="Previous week" className="rounded-full p-2 hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button>
+        <p className="text-sm font-semibold">
+          {days[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – {days[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+        </p>
+        <button onClick={() => setOffset(offset + 1)} aria-label="Next week" className="rounded-full p-2 hover:bg-muted"><ChevronRight className="h-4 w-4" /></button>
+      </div>
+      <div className="grid gap-2 md:grid-cols-7">
+        {days.map((d) => {
+          const list = tasks.filter((t) => t.due_at && sameDay(new Date(t.due_at), d));
+          const isToday = sameDay(d, today);
+          return (
+            <div key={d.toISOString()} className={`min-h-24 rounded-2xl border p-2 ${isToday ? "ring-2 ring-brand-2" : ""}`}>
+              <p className="mb-1 text-xs font-semibold text-muted-foreground">
+                {d.toLocaleDateString(undefined, { weekday: "short" })} <span className={isToday ? "text-foreground" : ""}>{d.getDate()}</span>
+              </p>
+              <div className="space-y-1">
+                {list.map((t) => (
+                  <button key={t.id} onClick={() => onToggle(t)}
+                    className={`block w-full truncate rounded-lg px-2 py-1 text-left text-xs ${t.done ? "bg-muted text-muted-foreground line-through" : priorityStyle[t.priority] + " font-medium"}`}>
+                    {new Date(t.due_at!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} {t.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-xs text-muted-foreground">Tap a task to mark it done. Tasks without a due date show in list view.</p>
     </div>
   );
 }

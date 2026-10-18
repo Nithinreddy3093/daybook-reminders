@@ -30,6 +30,6 @@ export async function toggleTask(t: Task) {
 
 export const priorityStyle: Record<string, string> = {
   high: "bg-brand-3/15 text-brand-3",
-  medium: "bg-brand-1/15 text-brand-1",
+  medium: "bg-brand/15 text-brand",
   normal: "bg-muted text-muted-foreground",
 };
