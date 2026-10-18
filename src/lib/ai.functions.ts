@@ -105,3 +105,24 @@ export const suggestCaption = createServerFn({ method: "POST" })
       throw e;
     }
   });
+
+export const getBriefing = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { mode: "morning" | "evening"; now: string }) => ({
+    mode: input.mode === "evening" ? ("evening" as const) : ("morning" as const),
+    now: String(input.now ?? "").slice(0, 80),
+  }))
+  .handler(async ({ data, context }) => {
+    const { data: tasks } = await context.supabase
+      .from("tasks").select("title, done, due_at, priority, category").order("due_at", { ascending: true }).limit(40);
+    const prompt = data.mode === "morning"
+      ? "Write a short morning briefing (max 70 words): the 2-3 most important things for today, then one encouraging focus thought. Plain text, no markdown."
+      : "Write a short warm evening reflection (max 60 words): acknowledge what got done today, gently mention what can move to tomorrow, and end with one reflective question. Plain text, no markdown.";
+    try {
+      const text = await ask(prompt, `Local time: ${data.now}\nTasks: ${JSON.stringify(tasks ?? [])}`);
+      return { text: text.trim() };
+    } catch (e) {
+      if (e instanceof GatewayError) return { text: "", error: e.message };
+      throw e;
+    }
+  });

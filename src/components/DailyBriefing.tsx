@@ -18,7 +18,7 @@ export function DailyBriefing({ tasks }: { tasks: Task[] }) {
   const [saving, setSaving] = useState(false);
 
   const today = new Date().toDateString();
-  const doneToday = tasks.filter((t) => t.done && new Date(t.updated_at ?? t.created_at).toDateString() === today);
+  const doneToday = tasks.filter((t) => t.done && new Date(t.due_at ?? t.created_at).toDateString() === today);
   const dueToday = tasks.filter((t) => !t.done && t.due_at && new Date(t.due_at).toDateString() === today);
   const high = tasks.filter((t) => !t.done && t.priority === "high");
 
@@ -34,8 +34,7 @@ export function DailyBriefing({ tasks }: { tasks: Task[] }) {
   const saveHighlight = async () => {
     if (!note.trim()) return;
     setSaving(true);
-    const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase.from("memories").insert({ user_id: u.user!.id, caption: note.trim(), tags: ["highlight"] });
+    const { error } = await supabase.from("memories").insert({ caption: note.trim(), tags: ["highlight"] });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     setNote("");
