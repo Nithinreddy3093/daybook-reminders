@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText, Grid3x3, Heart, Paperclip, Rows3, Search, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { memoriesQuery, fmtWhen } from "@/lib/data";
+import { memoriesQuery, fmtWhen, type Memory } from "@/lib/data";
 import { suggestCaption } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/memories")({
@@ -21,7 +21,6 @@ export const Route = createFileRoute("/_authenticated/memories")({
   component: MemoriesPage,
 });
 
-type Memory = (typeof memoriesQuery extends { queryFn?: infer F } ? F extends (...a: never[]) => Promise<infer R> ? R : never : never) extends (infer M)[] ? M : never;
 const FILTERS = ["All", "Photos", "Videos", "Notes", "Files", "Favorites"] as const;
 const isImg = (m: Memory) => !!m.file_type?.startsWith("image/");
 
