@@ -65,7 +65,7 @@ function PlansPage() {
         if (filter === "Upcoming") return !t.done && t.due_at && new Date(t.due_at) > now;
         return true;
       })
-      .sort((a, b) => Number(a.done) - Number(b.done) || rank[a.priority] - rank[b.priority]);
+      .sort((a, b) => Number(a.done) - Number(b.done) || (rank[a.priority] ?? 2) - (rank[b.priority] ?? 2));
   }, [tasks, filter, cat]);
 
   const usedCats = Array.from(new Set(tasks.map((t) => t.category).filter(Boolean))) as string[];
@@ -175,7 +175,7 @@ function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => v
       <div className="flex items-center justify-between">
         <button onClick={() => setOffset(offset - 1)} aria-label="Previous week" className="rounded-full p-2 hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button>
         <p className="text-sm font-semibold">
-          {days[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – {days[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+          {days[0]!.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – {days[6]!.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
         </p>
         <button onClick={() => setOffset(offset + 1)} aria-label="Next week" className="rounded-full p-2 hover:bg-muted"><ChevronRight className="h-4 w-4" /></button>
       </div>

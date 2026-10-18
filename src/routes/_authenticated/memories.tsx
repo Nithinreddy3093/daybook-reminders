@@ -65,7 +65,7 @@ function MemoriesPage() {
   const suggest = async () => {
     setAiBusy(true);
     try {
-      const r = await aiCaption({ data: { note: caption, fileName: file?.name } });
+      const r = await aiCaption({ data: { note: caption, fileName: file?.name ?? "" } });
       if (r.caption) setCaption(r.caption);
       if (r.tags.length) setTags(r.tags.join(" "));
       if (!r.caption && !r.tags.length) toast.error("No suggestion right now");
@@ -204,7 +204,7 @@ function MemoriesPage() {
 function Lightbox({ items, index, onIndex, onClose, onFav }: {
   items: Memory[]; index: number; onIndex: (i: number) => void; onClose: () => void; onFav: (m: Memory) => void;
 }) {
-  const m = items[index];
+  const m = items[index]!;
   const touch = useRef<number | null>(null);
   const prev = () => onIndex((index - 1 + items.length) % items.length);
   const next = () => onIndex((index + 1) % items.length);
@@ -217,8 +217,8 @@ function Lightbox({ items, index, onIndex, onClose, onFav }: {
 
   return (
     <div role="dialog" aria-modal className="fixed inset-0 z-50 flex flex-col bg-foreground/95 text-background backdrop-blur"
-      onTouchStart={(e) => (touch.current = e.touches[0].clientX)}
-      onTouchEnd={(e) => { if (touch.current === null) return; const dx = e.changedTouches[0].clientX - touch.current; if (Math.abs(dx) > 50) (dx > 0 ? prev() : next()); touch.current = null; }}>
+      onTouchStart={(e) => (touch.current = e.touches[0]?.clientX ?? null)}
+      onTouchEnd={(e) => { if (touch.current === null) return; const dx = (e.changedTouches[0]?.clientX ?? touch.current) - touch.current; if (Math.abs(dx) > 50) (dx > 0 ? prev() : next()); touch.current = null; }}>
       <div className="flex gap-1 px-3 pt-3">
         {items.map((x, i) => <span key={x.id} className={`h-0.5 flex-1 rounded-full ${i <= index ? "bg-background" : "bg-background/30"}`} />)}
       </div>
