@@ -125,7 +125,7 @@ function RootShell({ children }: { children: ReactNode }) {
         </div>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(sessionStorage.getItem("keep-splash"))document.getElementById("keep-splash").remove();else sessionStorage.setItem("keep-splash","1")}catch(e){}`,
+            __html: `try{if(sessionStorage.getItem("keep-splash"))document.getElementById("keep-splash").style.display="none";else sessionStorage.setItem("keep-splash","1")}catch(e){}`,
           }}
         />
         {children}
