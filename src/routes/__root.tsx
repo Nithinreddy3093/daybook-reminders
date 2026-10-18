@@ -117,6 +117,17 @@ function RootShell({ children }: { children: ReactNode }) {
         />
       </head>
       <body>
+        <div id="keep-splash" aria-hidden="true" suppressHydrationWarning>
+          <div className="keep-splash-logo">
+            <span className="keep-splash-glyph">K</span>
+          </div>
+          <div className="keep-splash-word">Keep</div>
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(sessionStorage.getItem("keep-splash"))document.getElementById("keep-splash").style.display="none";else sessionStorage.setItem("keep-splash","1")}catch(e){}`,
+          }}
+        />
         {children}
         <Scripts />
       </body>
