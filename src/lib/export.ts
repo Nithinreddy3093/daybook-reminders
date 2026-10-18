@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 function toCsv(rows: Record<string, unknown>[]) {
   if (!rows.length) return "";
-  const keys = Object.keys(rows[0]);
+  const keys = Object.keys(rows[0] ?? {});
   const esc = (v: unknown) => {
     const s = v == null ? "" : Array.isArray(v) ? v.join(" ") : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;

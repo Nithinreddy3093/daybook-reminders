@@ -57,7 +57,7 @@ function ProfilePage() {
   const save = async () => {
     if (!profile) return;
     const { error } = await supabase.from("profiles").upsert({ id: profile.id, display_name: name.trim().slice(0, 60), bio: bio.trim().slice(0, 200), updated_at: new Date().toISOString() });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["profile"] });
     toast("Profile saved");
   };
@@ -65,8 +65,8 @@ function ProfilePage() {
   const pickTheme = (t: Theme) => { applyTheme(t); setTheme(t); };
 
   const askNotify = async () => {
-    if (!("Notification" in window)) return toast.error("Notifications are not supported on this device");
-    if (window.top !== window.self) return toast("Open the app in its own tab to allow notifications");
+    if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
+    if (window.top !== window.self) { toast("Open the app in its own tab to allow notifications"); return; }
     const p = await Notification.requestPermission();
     setPerm(p);
     toast(p === "granted" ? "Notifications on" : "Notifications blocked — allow them in your browser's site settings");
