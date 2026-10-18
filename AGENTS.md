@@ -8,3 +8,7 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- App data (tasks, memories) is read/written from the browser via the Supabase client with per-user RLS; uploads go to the private `uploads` bucket under `<user_id>/`. Why: simple CRUD, RLS enforces ownership.
+- AI calls live in `src/lib/ai.functions.ts` behind `requireSupabaseAuth`. Why: keeps prompts and keys server-side.
+- Reminders fire in-app (toast + browser Notification) while the app is open. Why: no push service configured yet.
