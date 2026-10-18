@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id?: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           caption: string | null
@@ -55,19 +73,28 @@ export type Database = {
           bio: string | null
           display_name: string | null
           id: string
+          last_active: string | null
+          streak: number
           updated_at: string
+          username: string | null
         }
         Insert: {
           bio?: string | null
           display_name?: string | null
           id: string
+          last_active?: string | null
+          streak?: number
           updated_at?: string
+          username?: string | null
         }
         Update: {
           bio?: string | null
           display_name?: string | null
           id?: string
+          last_active?: string | null
+          streak?: number
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }

@@ -5,6 +5,7 @@ import { tasksQuery, memoriesQuery, fmtWhen } from "@/lib/data";
 import { AiSuggest } from "@/components/AiSuggest";
 import { QuickAdd } from "@/components/QuickAdd";
 import { DailyBriefing } from "@/components/DailyBriefing";
+import { FriendTray } from "@/components/FriendTray";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -40,6 +41,7 @@ function HomePage() {
 
   return (
     <div className="space-y-6">
+      <FriendTray />
       <h1 className="text-3xl font-bold">{greet}</h1>
       <QuickAdd />
       <DailyBriefing tasks={tasks} />

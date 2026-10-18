@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Bell, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
@@ -27,8 +27,13 @@ const profileQuery = {
   queryKey: ["profile"],
   queryFn: async () => {
     const { data: u } = await supabase.auth.getUser();
-    const { data } = await supabase.from("profiles").select("*").eq("id", u.user!.id).maybeSingle();
-    return { id: u.user!.id, email: u.user!.email ?? "", display_name: data?.display_name ?? "", bio: data?.bio ?? "" };
+    const id = u.user!.id;
+    const [{ data }, { count: followers }, { count: following }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", id),
+      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", id),
+    ]);
+    return { id, email: u.user!.email ?? "", display_name: data?.display_name ?? "", bio: data?.bio ?? "", username: data?.username ?? "", followers: followers ?? 0, following: following ?? 0 };
   },
 };
 
@@ -40,12 +45,13 @@ function ProfilePage() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [username, setUsername] = useState("");
   const [theme, setTheme] = useState<Theme>("light");
   const [perm, setPerm] = useState<string>("default");
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => { setTheme(readTheme()); setPerm("Notification" in window ? Notification.permission : "unsupported"); }, []);
-  useEffect(() => { if (profile) { setName(profile.display_name); setBio(profile.bio); } }, [profile]);
+  useEffect(() => { if (profile) { setName(profile.display_name); setBio(profile.bio); setUsername(profile.username); } }, [profile]);
 
   const stats = {
     doneTasks: tasks.filter((t) => t.done).length,
@@ -56,8 +62,10 @@ function ProfilePage() {
 
   const save = async () => {
     if (!profile) return;
-    const { error } = await supabase.from("profiles").upsert({ id: profile.id, display_name: name.trim().slice(0, 60), bio: bio.trim().slice(0, 200), updated_at: new Date().toISOString() });
-    if (error) { toast.error(error.message); return; }
+    const un = username.trim().toLowerCase();
+    if (un && !/^[a-z0-9_.]{3,24}$/.test(un)) { toast.error("Username: 3–24 letters, numbers, _ or ."); return; }
+    const { error } = await supabase.from("profiles").upsert({ id: profile.id, display_name: name.trim().slice(0, 60), username: un || null, bio: bio.trim().slice(0, 200), updated_at: new Date().toISOString() });
+    if (error) { toast.error(error.code === "23505" ? "That username is taken" : error.message); return; }
     qc.invalidateQueries({ queryKey: ["profile"] });
     toast("Profile saved");
   };
@@ -100,12 +108,18 @@ function ProfilePage() {
             <span><b>{stats.memories}</b> memories</span>
             <span><b>{stats.streak}</b> day streak</span>
           </div>
+          <Link to="/friends" className="mt-1 flex gap-5 text-sm">
+            <span><b>{profile?.followers ?? 0}</b> followers</span>
+            <span><b>{profile?.following ?? 0}</b> following</span>
+          </Link>
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border p-5">
         <h2 className="font-semibold">About you</h2>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Display name" maxLength={60}
+          className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username (so friends can find you)" maxLength={24}
           className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short bio" maxLength={200} rows={2}
           className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
