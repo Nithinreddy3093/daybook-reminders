@@ -96,7 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
+      <main className="keep-reveal mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
       <QuickCapture />
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden">
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
