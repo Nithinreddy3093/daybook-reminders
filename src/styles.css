@@ -134,9 +134,7 @@
   animation: keep-splash-out 0.5s ease 1.3s forwards;
 }
 .keep-splash-logo {
-  width: 88px; height: 88px; border-radius: 26px;
-  background: linear-gradient(135deg, #f58529, #dd2a7b 55%, #8134af);
-  display: flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px; border-radius: 26px; object-fit: cover; display: block;
   box-shadow: 0 20px 50px -15px rgba(221, 42, 123, 0.55);
   animation: keep-splash-pop 0.9s cubic-bezier(.2,.9,.3,1.3) both;
 }

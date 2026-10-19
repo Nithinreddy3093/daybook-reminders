@@ -118,9 +118,7 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         <div id="keep-splash" aria-hidden="true" suppressHydrationWarning>
-          <div className="keep-splash-logo">
-            <span className="keep-splash-glyph">K</span>
-          </div>
+          <img src="/icon-512.png" alt="" className="keep-splash-logo" width={96} height={96} />
           <div className="keep-splash-word">Keep</div>
         </div>
         <script
