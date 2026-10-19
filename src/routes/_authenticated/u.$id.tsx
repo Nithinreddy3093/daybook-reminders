@@ -44,6 +44,7 @@ function UserPage() {
   const name = p.display_name || p.username || "Keep user";
   const theirs = share.data?.theirs;
   const mine = share.data?.mine;
+  const isSelf = share.data?.uid === id;
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
@@ -123,7 +124,7 @@ function UserPage() {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
