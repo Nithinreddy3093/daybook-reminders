@@ -94,3 +94,17 @@ export async function fileUrl(path: string) {
   urlCache.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60 * 1000 });
   return data.signedUrl;
 }
+
+export async function sendChecklist(to: string, title: string, items: string[]) {
+  const list = items.map((t) => t.trim()).filter(Boolean).slice(0, 50);
+  if (!list.length) return;
+  const name = title.trim().slice(0, 120) || "Checklist";
+  const { error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `✅ ${name}`, kind: "checklist", plan: { title: name, items: list.map((text) => ({ text })) } });
+  if (error) throw error;
+}
+
+export async function updateChecklist(id: string, item: string | null, add: string | null = null) {
+  const { data, error } = await supabase.rpc("checklist_update", { _msg: id, _item: item ?? "", _add: add ?? "" });
+  if (error) throw error;
+  return data;
+}
