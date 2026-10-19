@@ -202,7 +202,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      follow_list: {
+        Args: { _id: string; _tab: string }
+        Returns: {
+          bio: string
+          display_name: string
+          id: string
+          last_active: string
+          streak: number
+          username: string
+        }[]
+      }
+      is_connected: { Args: { _other: string }; Returns: boolean }
+      public_profile: {
+        Args: { _id: string }
+        Returns: {
+          bio: string
+          display_name: string
+          followers: number
+          following: number
+          id: string
+          last_active: string
+          streak: number
+          username: string
+        }[]
+      }
+      search_profiles: {
+        Args: { _q: string }
+        Returns: {
+          bio: string
+          display_name: string
+          id: string
+          last_active: string
+          streak: number
+          username: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

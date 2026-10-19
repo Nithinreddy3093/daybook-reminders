@@ -15,11 +15,7 @@ export const activeToday = (p: Pick<PublicProfile, "last_active">, now = new Dat
 async function me() { const { data } = await supabase.auth.getUser(); return data.user!.id; }
 
 export async function searchProfiles(q: string): Promise<PublicProfile[]> {
-  const uid = await me();
-  const term = q.trim().replace(/[%,()]/g, "");
-  let query = supabase.from("profiles").select(COLS).neq("id", uid).limit(20);
-  if (term) query = query.or(`display_name.ilike.%${term}%,username.ilike.%${term}%`);
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc("search_profiles", { _q: q.trim().slice(0, 50) });
   if (error) throw error;
   return (data ?? []) as PublicProfile[];
 }
@@ -38,12 +34,12 @@ export async function getFollowing(): Promise<PublicProfile[]> {
 }
 
 export async function getProfile(id: string) {
-  const [{ data: p }, { count: followers }, { count: following }] = await Promise.all([
-    supabase.from("profiles").select(COLS).eq("id", id).maybeSingle(),
-    supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", id),
-    supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", id),
-  ]);
-  return { profile: p as PublicProfile | null, followers: followers ?? 0, following: following ?? 0 };
+  const { data, error } = await supabase.rpc("public_profile", { _id: id });
+  if (error) throw error;
+  const r = data?.[0];
+  if (!r) return { profile: null as PublicProfile | null, followers: 0, following: 0 };
+  const { followers, following, ...profile } = r;
+  return { profile: profile as PublicProfile, followers: Number(followers), following: Number(following) };
 }
 
 export async function setFollow(id: string, follow: boolean) {
@@ -58,13 +54,9 @@ export const initials = (p: { display_name?: string | null; username?: string | 
   (p.display_name || p.username || "?").slice(0, 2).toUpperCase();
 
 export async function getFollowList(id: string, tab: "followers" | "following"): Promise<PublicProfile[]> {
-  const col = tab === "followers" ? "following_id" : "follower_id";
-  const other = tab === "followers" ? "follower_id" : "following_id";
-  const { data } = await supabase.from("follows").select(other).eq(col, id).limit(500);
-  const ids = (data ?? []).map((r) => (r as Record<string, string>)[other]).filter((x): x is string => !!x);
-  if (!ids.length) return [];
-  const { data: ps } = await supabase.from("profiles").select(COLS).in("id", ids);
-  return (ps ?? []) as PublicProfile[];
+  const { data, error } = await supabase.rpc("follow_list", { _id: id, _tab: tab });
+  if (error) throw error;
+  return (data ?? []) as PublicProfile[];
 }
 
 /** The signed-in user's own streak, from the same source friends see. */
