@@ -57,6 +57,13 @@
       "when": 1792396931756,
       "tag": "0007_avatars_shares_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792399714811,
+      "tag": "0008_protect_streak",
+      "breakpoints": true
     }
   ]
 }
