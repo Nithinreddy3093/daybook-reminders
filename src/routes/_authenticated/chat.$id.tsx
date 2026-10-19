@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, Flame } from "lucide-react";
+import { ArrowLeft, Send, Flame, CalendarPlus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getThread, markRead, sendMessage, type Message } from "@/lib/messages";
+import { getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 import { playSound } from "@/lib/sounds";
@@ -103,6 +103,21 @@ function ChatPage() {
     }
   };
 
+  const [planOpen, setPlanOpen] = useState(false);
+  const [pTitle, setPTitle] = useState("");
+  const [pWhen, setPWhen] = useState("");
+  const proposePlan = async () => {
+    if (!pTitle.trim()) return;
+    const at = pWhen ? new Date(pWhen).toISOString() : null;
+    try { await sendPlan(id, { title: pTitle, due_at: at, remind_at: at }); playSound("sent"); setPlanOpen(false); setPTitle(""); setPWhen(""); }
+    catch { toast.error("Could not send plan"); }
+  };
+  const answer = async (mid: string, ok: boolean) => {
+    qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid ? { ...m, plan_status: ok ? "accepted" : "declined" } : m) } : old);
+    try { await respondPlan(mid, ok); if (ok) { toast("Added to both your plans"); qc.invalidateQueries({ queryKey: ["tasks"] }); } }
+    catch { toast.error("Could not update plan"); qc.invalidateQueries({ queryKey: key }); }
+  };
+
   const p = prof.data?.profile;
   const last = msgs[msgs.length - 1];
   const lastMine = last && last.sender_id !== id;
@@ -141,7 +156,24 @@ function ChatPage() {
             : `rounded-3xl ${prevSame ? "rounded-tl-md" : ""} ${nextSame ? "rounded-bl-md" : ""}`;
           return (
             <div key={m.id} className={`keep-bubble-in flex ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"}`}>
-              {emojiOnly ? (
+              {m.kind === "plan" && m.plan ? (
+                <div className={`w-64 overflow-hidden rounded-3xl border bg-background ${m.pending ? "opacity-70" : ""}`}>
+                  <div className="bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">📅 Plan together</div>
+                  <div className="space-y-1 px-4 py-3">
+                    <p className="font-semibold">{m.plan.title}</p>
+                    {m.plan.due_at && <p className="text-xs text-muted-foreground">{new Date(m.plan.due_at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p>}
+                    {m.plan_status === "pending" && !mine && (
+                      <div className="flex gap-2 pt-2">
+                        <button onClick={() => answer(m.id, true)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-primary py-1.5 text-xs font-semibold text-primary-foreground active:scale-95"><Check className="h-3.5 w-3.5" />Accept</button>
+                        <button onClick={() => answer(m.id, false)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-muted py-1.5 text-xs font-semibold active:scale-95"><X className="h-3.5 w-3.5" />Decline</button>
+                      </div>
+                    )}
+                    {m.plan_status === "pending" && mine && <p className="pt-1 text-xs text-muted-foreground">Waiting for them to accept…</p>}
+                    {m.plan_status === "accepted" && <p className="pt-1 text-xs font-semibold text-primary">✓ Added to both your plans</p>}
+                    {m.plan_status === "declined" && <p className="pt-1 text-xs text-muted-foreground">Declined</p>}
+                  </div>
+                </div>
+              ) : emojiOnly ? (
                 <span className={`text-4xl ${m.pending ? "opacity-60" : ""}`}>{m.content}</span>
               ) : (
                 <div className={`max-w-[78%] whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
@@ -159,8 +191,19 @@ function ChatPage() {
       </div>
 
       <div className="border-t bg-background px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {!text && (
+        {planOpen && (
+          <div className="keep-bubble-in mb-2 space-y-2 rounded-2xl border p-3">
+            <input autoFocus value={pTitle} onChange={(e) => setPTitle(e.target.value)} maxLength={200} placeholder="What should we plan?" className="w-full bg-transparent text-sm outline-none" />
+            <div className="flex items-center gap-2">
+              <input type="datetime-local" value={pWhen} onChange={(e) => setPWhen(e.target.value)} className="flex-1 rounded-lg bg-muted px-2 py-1 text-xs" />
+              <button type="button" onClick={() => setPlanOpen(false)} className="rounded-full px-3 py-1 text-xs">Cancel</button>
+              <button type="button" onClick={proposePlan} disabled={!pTitle.trim()} className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40">Send</button>
+            </div>
+          </div>
+        )}
+        {!text && !planOpen && (
           <div className="mb-2 flex gap-2">
+            <button type="button" onClick={() => setPlanOpen(true)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium transition active:scale-90"><CalendarPlus className="h-4 w-4" />Plan</button>
             {QUICK.map((e) => (
               <button key={e} type="button" onClick={() => send(e)} className="rounded-full bg-muted px-3 py-1 text-lg transition active:scale-90">{e}</button>
             ))}

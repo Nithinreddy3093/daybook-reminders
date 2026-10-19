@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PublicProfile } from "@/lib/social";
 
-export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string };
+export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string; kind?: string; plan?: { title: string; due_at?: string | null; remind_at?: string | null; notes?: string | null } | null; plan_status?: string | null };
 
 async function me() { const { data } = await supabase.auth.getUser(); return data.user!.id; }
 
@@ -49,4 +49,16 @@ export async function sendMessage(to: string, content: string) {
 export async function markRead(from: string) {
   const uid = await me();
   await supabase.from("messages").update({ read_at: new Date().toISOString() }).eq("sender_id", from).eq("recipient_id", uid).is("read_at", null);
+}
+
+export async function sendPlan(to: string, plan: { title: string; due_at: string | null; remind_at: string | null }) {
+  const title = plan.title.trim().slice(0, 200);
+  if (!title) return;
+  const { error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `📅 ${title}`, kind: "plan", plan });
+  if (error) throw error;
+}
+
+export async function respondPlan(id: string, accept: boolean) {
+  const { error } = await supabase.rpc("respond_plan", { _msg: id, _accept: accept });
+  if (error) throw error;
 }
