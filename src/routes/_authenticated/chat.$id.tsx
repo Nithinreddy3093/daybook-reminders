@@ -317,7 +317,7 @@ function ChatPage() {
                 </button>
               )}
               {m.kind === "checklist" && m.plan ? (
-                <ChatChecklist title={m.plan.title} items={((m.plan as { items?: ChecklistItem[] }).items) ?? []} pending={m.pending}
+                <ChatChecklist title={m.plan.title} items={((m.plan as { items?: ChecklistItem[] }).items) ?? []} pending={!!m.pending}
                   onToggle={(it) => toggleItem(m.id, it)} onAdd={(t) => addItem(m.id, t)} />
               ) : m.kind === "plan" && m.plan ? (
                 <div className={`w-64 overflow-hidden rounded-3xl border bg-background ${m.pending ? "opacity-70" : ""}`}>
