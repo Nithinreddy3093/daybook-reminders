@@ -38,8 +38,8 @@ export function ShareSheet({ myId, name, onClose }: { myId: string; name: string
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 md:items-center" onClick={onClose}>
-      <div className="keep-bubble-in flex max-h-[80vh] w-full max-w-md flex-col rounded-t-3xl bg-background pb-[calc(1rem+env(safe-area-inset-bottom))] md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 p-4" onClick={onClose}>
+      <div className="keep-bubble-in flex max-h-[80dvh] w-full max-w-md flex-col rounded-3xl bg-background pb-4" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted" />
         <p className="py-3 text-center font-display font-semibold">Share profile</p>
         <div className="px-4"><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search friends" className="w-full rounded-xl bg-muted px-3 py-2 text-base outline-none md:text-sm" /></div>

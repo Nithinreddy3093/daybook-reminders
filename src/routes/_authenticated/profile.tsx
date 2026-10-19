@@ -17,6 +17,7 @@ import { currentSubscription, disablePush, enablePush, pushSupported } from "@/l
 import { sendTestPush } from "@/lib/push.functions";
 import { getMyStreak } from "@/lib/social";
 import { ShareSheet } from "@/components/ShareSheet";
+import { incomingRequests, respondRequest } from "@/lib/friends";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -66,6 +67,17 @@ function ProfilePage() {
   const { data: myStreak = 0 } = useQuery({ queryKey: ["my-streak"], queryFn: getMyStreak });
   const avatar = useAvatar(profile?.id);
   const { data: shares = [] } = useQuery({ queryKey: ["my-shares"], queryFn: myShares });
+  const { data: requests = [] } = useQuery({ queryKey: ["friend-requests"], queryFn: incomingRequests });
+  const answer = async (id: string, accept: boolean) => {
+    qc.setQueryData(["friend-requests"], requests.filter((r) => r.id !== id));
+    try {
+      await respondRequest(id, accept);
+      toast(accept ? "You're now friends" : "Request removed");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: ["following"] });
+      qc.invalidateQueries({ queryKey: ["following-ids"] });
+    } catch { toast.error("Something went wrong"); qc.invalidateQueries({ queryKey: ["friend-requests"] }); }
+  };
 
   useEffect(() => {
     setTheme(readTheme());
@@ -197,8 +209,8 @@ function ProfilePage() {
       {shareOpen && profile && <ShareSheet myId={profile.id} name={profile.display_name || "Me"} onClose={() => setShareOpen(false)} />}
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; }} />
       {photoMenu && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
-          <div className="keep-bubble-in w-full max-w-sm space-y-3 rounded-t-3xl bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/60 p-4" onClick={() => setPhotoMenu(false)}>
+          <div className="keep-bubble-in w-full max-w-sm space-y-3 rounded-3xl bg-background p-4 text-center" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto w-fit">{avatarEl(64)}</div>
             <p className="font-display font-semibold">Profile photo</p>
             <div className="divide-y overflow-hidden rounded-2xl border text-sm font-semibold">
@@ -211,14 +223,15 @@ function ProfilePage() {
         document.body,
       )}
 
-      {editing && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-background">
-          <div className="flex h-14 items-center justify-between border-b px-4 pt-[env(safe-area-inset-top)]">
+      {editing && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/60 p-4">
+        <div className="keep-bubble-in flex max-h-[85dvh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-background">
+          <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
             <button onClick={() => { setEditing(false); if (profile) { setName(profile.display_name); setBio(profile.bio); setUsername(profile.username); } }} className="text-sm">Cancel</button>
             <p className="font-display font-semibold">Edit profile</p>
             <button disabled={saving} onClick={async () => { setSaving(true); if (await save()) setEditing(false); setSaving(false); }} className="text-sm font-semibold text-brand-2 disabled:opacity-50">{saving ? "Saving…" : "Done"}</button>
           </div>
-          <div className="mx-auto w-full max-w-xl flex-1 overflow-y-auto p-5">
+          <div className="w-full flex-1 overflow-y-auto p-5">
             <div className="flex flex-col items-center gap-2">
               {avatarEl(96)}
               <button type="button" onClick={() => setPhotoMenu(true)} className="text-sm font-semibold text-brand-2">Change profile photo</button>
@@ -231,7 +244,22 @@ function ProfilePage() {
             <p className="mt-3 text-xs text-muted-foreground">Friends only see your photo, name, username, bio and streak.</p>
           </div>
         </div>
+        </div>,
+        document.body,
       )}
+
+      <section className="space-y-2 rounded-2xl border p-5">
+        <h2 className="flex items-center gap-2 font-semibold">Friend requests {requests.length > 0 && <span className="rounded-full bg-primary px-2 text-xs text-primary-foreground">{requests.length}</span>}</h2>
+        {!requests.length && <p className="text-sm text-muted-foreground">No new requests.</p>}
+        {requests.map((r) => (
+          <ProfileRow key={r.id} p={r} action={
+            <div className="flex gap-1">
+              <button onClick={() => answer(r.id, true)} className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Accept</button>
+              <button onClick={() => answer(r.id, false)} className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">Reject</button>
+            </div>
+          } />
+        ))}
+      </section>
 
       <section className="space-y-2 rounded-2xl border p-5">
         <h2 className="font-semibold">Who can see your plans</h2>
