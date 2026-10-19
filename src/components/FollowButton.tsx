@@ -8,6 +8,7 @@ export const followingIdsQuery = { queryKey: ["following-ids"], queryFn: getFoll
 
 /** Two-way friend button: Add friend → Requested → Friends (or Accept when they asked you). */
 export function FollowButton({ id }: { id: string }) {
+  const { data: me } = useQuery({ queryKey: ["me-id"], queryFn: async () => (await supabase.auth.getUser()).data.user?.id ?? null, staleTime: Infinity });
   const { data: friends = [] } = useQuery(followingIdsQuery);
   const { data: sent = [] } = useQuery({ queryKey: ["sent-requests"], queryFn: sentRequestIds });
   const { data: incoming = [] } = useQuery({ queryKey: ["incoming-ids"], queryFn: incomingIds });
