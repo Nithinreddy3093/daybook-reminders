@@ -212,7 +212,7 @@ function ChatPage() {
     catch { toast.error("Could not send checklist"); }
   };
   const patchItems = (mid: string, fn: (items: ChecklistItem[]) => ChecklistItem[]) =>
-    qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid && m.plan ? { ...m, plan: { ...m.plan, items: fn(((m.plan as { items?: ChecklistItem[] }).items) ?? []) } as Message["plan"] } : m) } : old);
+    qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid && m.plan ? { ...m, plan: { ...m.plan, items: fn(((m.plan as { items?: ChecklistItem[] }).items) ?? []) } as NonNullable<Message["plan"]> } : m) } : old);
   const toggleItem = async (mid: string, item: string) => {
     patchItems(mid, (items) => items.map((i) => i.id === item ? { ...i, done: !i.done, by: i.done ? null : uid ?? null } : i));
     try { await updateChecklist(mid, item); } catch { toast.error("Couldn't update"); qc.invalidateQueries({ queryKey: key }); }
