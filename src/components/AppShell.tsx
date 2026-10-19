@@ -111,9 +111,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="keep-reveal mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
-      <QuickCapture />
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden">
+      <main className={`keep-reveal mx-auto max-w-5xl px-4 ${inChat ? "pb-4 pt-3" : "pb-28 pt-6 md:pb-12"}`}>{children}</main>
+      {!inChat && <QuickCapture />}
+      <nav className={`fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden ${inChat ? "hidden" : ""}`}>
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
           {nav.map((n) => (
             <Link
@@ -137,8 +137,14 @@ function InboxLink() {
   const qc = useQueryClient();
   const { data: n = 0 } = useQuery({ queryKey: ["unread"], queryFn: unreadCount, refetchInterval: 60000 });
   useEffect(() => {
+    let uid: string | undefined;
+    supabase.auth.getUser().then(({ data }) => { uid = data.user?.id; });
     const ch = supabase.channel("unread-badge")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => qc.invalidateQueries({ queryKey: ["unread"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
+        qc.invalidateQueries({ queryKey: ["unread"] });
+        const row = p.new as { recipient_id?: string } | undefined;
+        if (p.eventType === "INSERT" && uid && row?.recipient_id === uid) playSound("received");
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [qc]);

@@ -2,7 +2,7 @@
 import { buildPushPayload } from "@block65/webcrypto-web-push";
 
 export type SubRow = { id: string; endpoint: string; p256dh: string; auth: string };
-export type PushData = { title: string; body: string; url?: string; tag?: string };
+export type PushData = { title: string; body: string; url?: string; tag?: string; sound?: string };
 
 /** Sends one push. Returns "gone" when the device subscription expired and should be deleted. */
 export async function sendPush(sub: SubRow, data: PushData): Promise<"ok" | "gone" | "error"> {
