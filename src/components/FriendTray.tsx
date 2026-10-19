@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Flame, Plus } from "lucide-react";
 import { getFollowing, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 
@@ -15,7 +15,7 @@ export function FriendTray() {
       {data.map((p) => (
         <Link key={p.id} to="/u/$id" params={{ id: p.id }} className="flex w-16 shrink-0 flex-col items-center gap-1 text-xs">
           <Avatar p={p} size={56} />
-          <span className="w-full truncate text-center">🔥{liveStreak(p)} {p.display_name || p.username}</span>
+          <span className="w-full truncate text-center"><Flame className="mr-0.5 inline h-3 w-3 text-primary" />{liveStreak(p)} {p.display_name || p.username}</span>
         </Link>
       ))}
     </div>

@@ -115,7 +115,7 @@ function PlansPage() {
 
       {view === "list" ? (
         <>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
             {FILTERS.map((f) => (
               <button key={f} onClick={() => setFilter(f)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ${filter === f ? "bg-foreground text-background" : "bg-muted"}`}>{f}</button>
             ))}

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Bell, Camera, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
+import { Bell, Camera, Flame, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
 import { photoToAvatar, useAvatar } from "@/lib/avatars";
 import { approve, myShares, removeShare } from "@/lib/shares";
 import { ProfileRow } from "@/components/ProfileCard";
@@ -165,7 +165,7 @@ function ProfilePage() {
           <div className="mt-2 flex gap-5 text-sm">
             <span><b>{stats.doneTasks}</b> done</span>
             <span><b>{stats.memories}</b> memories</span>
-            <span><b>🔥{myStreak}</b> streak</span>
+            <span className="inline-flex items-center gap-1"><Flame className="h-4 w-4 text-primary" /><b>{myStreak}</b> streak</span>
           </div>
           {profile && <div className="mt-1 flex gap-5 text-sm">
             <Link to="/follows/$id" params={{ id: profile.id }} search={{ tab: "followers" }}><b>{profile.followers}</b> followers</Link>
