@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2, Paperclip, FileText, Download, Plus, Mic, ChevronDown } from "lucide-react";
+import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2, Paperclip, FileText, Download, Plus, Mic, ChevronDown, ListChecks } from "lucide-react";
 import { tap } from "@/lib/haptics";
 import { useServerFn } from "@tanstack/react-start";
 import { createCollabPlan, type CollabPlan } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { sendChecklist, updateChecklist } from "@/lib/messages";
+import { ChatChecklist, type ChecklistItem } from "@/components/ChatChecklist";
 import { fileUrl, reactMessage, sendFile, getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
@@ -200,6 +202,25 @@ function ChatPage() {
     catch { toast.error("Could not update plan"); qc.invalidateQueries({ queryKey: key }); }
   };
 
+  const [listOpen, setListOpen] = useState(false);
+  const [lTitle, setLTitle] = useState("");
+  const [lItems, setLItems] = useState("");
+  const createList = async () => {
+    const items = lItems.split("\n");
+    if (!items.some((t) => t.trim())) return;
+    try { await sendChecklist(id, lTitle, items); playSound("sent"); setListOpen(false); setLTitle(""); setLItems(""); }
+    catch { toast.error("Could not send checklist"); }
+  };
+  const patchItems = (mid: string, fn: (items: ChecklistItem[]) => ChecklistItem[]) =>
+    qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid && m.plan ? { ...m, plan: { ...m.plan, items: fn(((m.plan as { items?: ChecklistItem[] }).items) ?? []) } as NonNullable<Message["plan"]> } : m) } : old);
+  const toggleItem = async (mid: string, item: string) => {
+    patchItems(mid, (items) => items.map((i) => i.id === item ? { ...i, done: !i.done, by: i.done ? null : uid ?? null } : i));
+    try { await updateChecklist(mid, item); } catch { toast.error("Couldn't update"); qc.invalidateQueries({ queryKey: key }); }
+  };
+  const addItem = async (mid: string, text: string) => {
+    try { await updateChecklist(mid, null, text); } catch { toast.error("Couldn't add item"); }
+  };
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const [heart, setHeart] = useState<string | null>(null);
@@ -286,15 +307,19 @@ function ChatPage() {
             : `rounded-3xl ${prevSame ? "rounded-tl-md" : ""} ${nextSame ? "rounded-bl-md" : ""}`;
           return (
             <div key={m.id} className={`relative flex ${i >= msgs.length - 3 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
-              onDoubleClick={() => react(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
-              {heart === m.id && <span className={`keep-heart absolute top-1/2 z-10 -translate-y-1/2 text-4xl ${mine ? "right-8" : "left-8"}`}>❤️</span>}
+>
+              <div className="relative max-w-[78%] select-none [-webkit-touch-callout:none]" onDoubleClick={() => react(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
+              {heart === m.id && <span className="keep-heart absolute left-1/2 top-1/2 z-10 -ml-5 -mt-6 text-4xl">❤️</span>}
               {m.reactions && Object.keys(m.reactions).length > 0 && (
                 <button type="button" onClick={(e) => { e.stopPropagation(); if (uid && m.reactions?.[uid]) react(m.id, m.reactions[uid]); }}
                   aria-label="Reactions" className={`absolute -bottom-3 z-10 flex items-center gap-0.5 rounded-full border bg-background px-1.5 py-0.5 text-xs shadow-sm ${mine ? "right-2" : "left-2"}`}>
                   {[...new Set(Object.values(m.reactions))].join("")}{Object.keys(m.reactions).length > 1 && <span className="text-[10px] text-muted-foreground">{Object.keys(m.reactions).length}</span>}
                 </button>
               )}
-              {m.kind === "plan" && m.plan ? (
+              {m.kind === "checklist" && m.plan ? (
+                <ChatChecklist title={m.plan.title} items={((m.plan as { items?: ChecklistItem[] }).items) ?? []} pending={!!m.pending}
+                  onToggle={(it) => toggleItem(m.id, it)} onAdd={(t) => addItem(m.id, t)} />
+              ) : m.kind === "plan" && m.plan ? (
                 <div className={`w-64 overflow-hidden rounded-3xl border bg-background ${m.pending ? "opacity-70" : ""}`}>
                   <div className="bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">📅 Plan together</div>
                   <div className="space-y-1 px-4 py-3">
@@ -317,10 +342,11 @@ function ChatPage() {
               ) : m.kind === "file" && m.attachment ? (
                 <AttachmentBubble a={m.attachment} mine={mine} caption={/^(📷 Photo|🎬 Video|🎤 Voice note|📎 )/u.test(m.content) ? "" : m.content} />
               ) : (
-                <div className={`relative max-w-[78%] select-text whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
+                <div className={`relative whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
                   {m.content}
                 </div>
               )}
+              </div>
             </div>
           );
         })}
@@ -374,10 +400,21 @@ function ChatPage() {
             <div className="flex justify-end"><button type="button" onClick={() => { setAiOpen(false); setDraft(null); }} className="text-xs text-muted-foreground">Close</button></div>
           </div>
         )}
-        {menuOpen && !planOpen && !aiOpen && (
+        {listOpen && (
+          <div className="keep-bubble-in mb-2 space-y-2 rounded-2xl border p-3">
+            <input value={lTitle} onChange={(e) => setLTitle(e.target.value)} maxLength={120} placeholder="Checklist name (e.g. Trip packing)" className="w-full bg-transparent text-sm font-semibold outline-none" />
+            <textarea value={lItems} onChange={(e) => setLItems(e.target.value)} rows={3} placeholder={"One item per line\nTickets\nSnacks"} className="w-full resize-none rounded-lg bg-muted px-2 py-1.5 text-sm outline-none" />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setListOpen(false)} className="rounded-full px-3 py-1 text-xs">Cancel</button>
+              <button type="button" onClick={createList} disabled={!lItems.trim()} className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground disabled:opacity-40">Send</button>
+            </div>
+          </div>
+        )}
+        {menuOpen && !planOpen && !aiOpen && !listOpen && (
           <div className="keep-bubble-in mb-2 flex flex-wrap gap-2">
             <button type="button" onClick={() => { tap(); setMenuOpen(false); fileInput.current?.click(); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><Paperclip className="h-4 w-4" />Photo / file</button>
             <button type="button" onClick={() => { tap(); setMenuOpen(false); setPlanOpen(true); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><CalendarPlus className="h-4 w-4" />Plan</button>
+            <button type="button" onClick={() => { tap(); setMenuOpen(false); setListOpen(true); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><ListChecks className="h-4 w-4" />Checklist</button>
             <button type="button" onClick={() => { tap(); setMenuOpen(false); setAiOpen(true); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><Sparkles className="h-4 w-4 text-primary" />AI Plan</button>
             {QUICK.map((e) => (
               <button key={e} type="button" onClick={() => { setMenuOpen(false); send(e); }} className="rounded-full bg-muted px-3 py-1 text-lg active:scale-90">{e}</button>

@@ -137,6 +137,16 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
 
+  // Remove the splash once it fades so it never blocks taps (important in home-screen mode).
+  useEffect(() => {
+    const el = document.getElementById("keep-splash");
+    if (!el) return;
+    const kill = () => el.remove();
+    el.addEventListener("animationend", (e) => { if (e.animationName === "keep-splash-out") kill(); });
+    const t = setTimeout(kill, 1200);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;

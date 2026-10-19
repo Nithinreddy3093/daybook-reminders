@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { useScrollLock } from "@/lib/use-sheet";
 import { Bell, Camera, Flame, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
 import { photoToAvatar, useAvatar } from "@/lib/avatars";
 import { approve, myShares, removeShare } from "@/lib/shares";
@@ -102,6 +104,7 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [photoMenu, setPhotoMenu] = useState(false);
   const [saving, setSaving] = useState(false);
+  useScrollLock(photoMenu || editing);
   const save = async () => {
     if (!profile) return false;
     const un = username.trim().toLowerCase();
@@ -159,9 +162,8 @@ function ProfilePage() {
     navigate({ to: "/auth", replace: true });
   };
 
-  const photoInput = (
-    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; setPhotoMenu(false); }} />
-  );
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pickPhoto = () => { setPhotoMenu(false); fileRef.current?.click(); };
   const avatarEl = (size: number) => avatar
     ? <img src={avatar} alt="" style={{ width: size, height: size }} className="rounded-full bg-muted object-cover" />
     : <div style={{ width: size, height: size, fontSize: size / 2.8 }} className="flex items-center justify-center rounded-full bg-background font-display font-bold">{initials}</div>;
@@ -193,17 +195,20 @@ function ProfilePage() {
       </section>
 
       {shareOpen && profile && <ShareSheet myId={profile.id} name={profile.display_name || "Me"} onClose={() => setShareOpen(false)} />}
-      {photoMenu && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
-          <div className="w-full max-w-sm space-y-4 rounded-t-3xl bg-background p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-center md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mx-auto w-fit">{avatarEl(220)}</div>
+      <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; }} />
+      {photoMenu && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
+          <div className="keep-bubble-in w-full max-w-sm space-y-3 rounded-t-3xl bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto w-fit">{avatarEl(64)}</div>
+            <p className="font-display font-semibold">Profile photo</p>
             <div className="divide-y overflow-hidden rounded-2xl border text-sm font-semibold">
-              <label className="block cursor-pointer py-3 text-primary">{avatar ? "Change photo" : "Add photo"}{photoInput}</label>
+              <button onClick={pickPhoto} className="block w-full py-3 text-primary">{avatar ? "Upload new photo" : "Upload photo"}</button>
               {avatar && <button onClick={() => { removePhoto(); setPhotoMenu(false); }} className="block w-full py-3 text-destructive">Remove photo</button>}
               <button onClick={() => setPhotoMenu(false)} className="block w-full py-3">Cancel</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {editing && (
@@ -216,7 +221,7 @@ function ProfilePage() {
           <div className="mx-auto w-full max-w-xl flex-1 overflow-y-auto p-5">
             <div className="flex flex-col items-center gap-2">
               {avatarEl(96)}
-              <label className="cursor-pointer text-sm font-semibold text-brand-2">Change profile photo{photoInput}</label>
+              <button type="button" onClick={() => setPhotoMenu(true)} className="text-sm font-semibold text-brand-2">Change profile photo</button>
             </div>
             <div className="mt-6 divide-y border-y">
               <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Name" className="w-full bg-transparent py-3 outline-none" /></Field>

@@ -241,6 +241,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      checklist_update: {
+        Args: { _add: string; _item: string; _msg: string }
+        Returns: Json
+      }
       follow_list: {
         Args: { _id: string; _tab: string }
         Returns: {
