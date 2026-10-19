@@ -63,7 +63,7 @@ function HomePage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {[[doneWeek, "done this week"], [momentsWeek, "moments this week"], [streak, "day streak 🔥"]].map(([n, l]) => (
+        {[[doneWeek, "done this week"], [momentsWeek, "moments this week"], [streak, "day streak"]].map(([n, l]) => (
           <div key={String(l)} className="rounded-2xl bg-muted p-4">
             <p className="font-display text-2xl font-bold">{n}</p>
             <p className="text-xs text-muted-foreground">{l}</p>

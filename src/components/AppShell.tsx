@@ -71,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => navigator.serviceWorker.removeEventListener("message", onMsg);
   }, []);
   const inChat = useRouterState({ select: (s) => s.location.pathname.startsWith("/chat/") });
+  const showFab = useRouterState({ select: (s) => ["/home", "/plans"].includes(s.location.pathname) });
   const askNotify = async () => {
     if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
     const p = await Notification.requestPermission();
@@ -80,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <ReminderWatcher />
-      <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur">
+      <header className={`sticky top-0 z-30 border-b bg-background/90 backdrop-blur ${inChat ? "hidden md:block" : ""}`}>
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link to="/home" className="font-display text-2xl font-bold text-gradient-brand">
             Keep
@@ -105,14 +106,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button onClick={askNotify} aria-label="Enable notifications" className="rounded-full p-2 hover:bg-muted">
               <Bell className="h-5 w-5" />
             </button>
-            <Link to="/profile" aria-label="Profile" className="rounded-full p-2 hover:bg-muted md:hidden">
-              <User className="h-5 w-5" />
-            </Link>
           </div>
         </div>
       </header>
-      <main className={`keep-reveal mx-auto max-w-5xl px-4 ${inChat ? "pb-4 pt-3" : "pb-28 pt-6 md:pb-12"}`}>{children}</main>
-      {!inChat && <QuickCapture />}
+      <main className={`keep-reveal mx-auto px-4 ${inChat ? "max-w-2xl pb-4 pt-3" : "max-w-5xl pb-36 pt-6 md:pb-28"}`}>{children}</main>
+      {showFab && <QuickCapture />}
       <nav className={`fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden ${inChat ? "hidden" : ""}`}>
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
           {nav.map((n) => (
