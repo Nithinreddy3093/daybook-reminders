@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, Flame, CalendarPlus, Check, X } from "lucide-react";
+import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { createCollabPlan, type CollabPlan } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
@@ -112,6 +114,25 @@ function ChatPage() {
     try { await sendPlan(id, { title: pTitle, due_at: at, remind_at: at }); playSound("sent"); setPlanOpen(false); setPTitle(""); setPWhen(""); }
     catch { toast.error("Could not send plan"); }
   };
+  const aiFn = useServerFn(createCollabPlan);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiText, setAiText] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [draft, setDraft] = useState<CollabPlan | null>(null);
+  const runAi = async (idea: string) => {
+    if (!idea.trim()) return;
+    setAiBusy(true); setDraft(null);
+    try {
+      const r = await aiFn({ data: { text: idea, now: new Date().toString(), tz: Intl.DateTimeFormat().resolvedOptions().timeZone } });
+      if (r.plan) setDraft(r.plan); else toast.error(r.error || "AI couldn't plan that");
+    } catch { toast.error("AI couldn't plan that"); }
+    finally { setAiBusy(false); }
+  };
+  const sendDraft = async () => {
+    if (!draft) return;
+    try { await sendPlan(id, draft); playSound("sent"); toast("Plan sent — waiting for their approval"); setDraft(null); setAiText(""); setAiOpen(false); }
+    catch { toast.error("Could not send plan"); }
+  };
   const answer = async (mid: string, ok: boolean) => {
     qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid ? { ...m, plan_status: ok ? "accepted" : "declined" } : m) } : old);
     try { await respondPlan(mid, ok); if (ok) { toast("Added to both your plans"); qc.invalidateQueries({ queryKey: ["tasks"] }); } }
@@ -162,6 +183,7 @@ function ChatPage() {
                   <div className="space-y-1 px-4 py-3">
                     <p className="font-semibold">{m.plan.title}</p>
                     {m.plan.due_at && <p className="text-xs text-muted-foreground">{new Date(m.plan.due_at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p>}
+                    {m.plan.notes && <p className="whitespace-pre-wrap pt-1 text-xs text-muted-foreground">{m.plan.notes}</p>}
                     {m.plan_status === "pending" && !mine && (
                       <div className="flex gap-2 pt-2">
                         <button onClick={() => answer(m.id, true)} className="flex flex-1 items-center justify-center gap-1 rounded-full bg-primary py-1.5 text-xs font-semibold text-primary-foreground active:scale-95"><Check className="h-3.5 w-3.5" />Accept</button>
@@ -201,9 +223,36 @@ function ChatPage() {
             </div>
           </div>
         )}
-        {!text && !planOpen && (
+        {aiOpen && (
+          <div className="keep-bubble-in mb-2 space-y-2 rounded-2xl border p-3">
+            <p className="flex items-center gap-1 text-xs font-semibold"><Sparkles className="h-3.5 w-3.5 text-primary" />Tell AI what you want to plan together</p>
+            <div className="flex flex-wrap gap-1.5">
+              {["Coffee catch-up this weekend", "Workout together tomorrow 7am", "Study session tonight 8pm", "Movie night Friday"].map((c) => (
+                <button key={c} type="button" onClick={() => { setAiText(c); runAi(c); }} className="rounded-full bg-muted px-2.5 py-1 text-xs active:scale-95">{c}</button>
+              ))}
+            </div>
+            <form onSubmit={(e) => { e.preventDefault(); runAi(aiText); }} className="flex gap-2">
+              <input autoFocus value={aiText} onChange={(e) => setAiText(e.target.value)} maxLength={500} placeholder="e.g. dinner Saturday 7:30pm downtown" className="flex-1 rounded-lg bg-muted px-3 py-1.5 text-sm outline-none" />
+              <button type="submit" disabled={aiBusy || !aiText.trim()} className="rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-40">{aiBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Plan"}</button>
+            </form>
+            {draft && (
+              <div className="rounded-xl bg-muted/60 p-3 text-sm">
+                <p className="font-semibold">{draft.title}</p>
+                {draft.due_at && <p className="text-xs text-muted-foreground">{new Date(draft.due_at).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</p>}
+                {draft.notes && <p className="whitespace-pre-wrap pt-1 text-xs text-muted-foreground">{draft.notes}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setDraft(null)} className="rounded-full px-3 py-1 text-xs">Discard</button>
+                  <button type="button" onClick={sendDraft} className="rounded-full bg-gradient-brand px-3 py-1 text-xs font-semibold text-primary-foreground">Send for approval</button>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end"><button type="button" onClick={() => { setAiOpen(false); setDraft(null); }} className="text-xs text-muted-foreground">Close</button></div>
+          </div>
+        )}
+        {!text && !planOpen && !aiOpen && (
           <div className="mb-2 flex gap-2">
             <button type="button" onClick={() => setPlanOpen(true)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium transition active:scale-90"><CalendarPlus className="h-4 w-4" />Plan</button>
+            <button type="button" onClick={() => setAiOpen(true)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium transition active:scale-90"><Sparkles className="h-4 w-4 text-primary" />AI Plan</button>
             {QUICK.map((e) => (
               <button key={e} type="button" onClick={() => send(e)} className="rounded-full bg-muted px-3 py-1 text-lg transition active:scale-90">{e}</button>
             ))}

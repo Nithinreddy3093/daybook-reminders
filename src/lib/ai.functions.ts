@@ -126,3 +126,28 @@ export const getBriefing = createServerFn({ method: "POST" })
       throw e;
     }
   });
+
+export type CollabPlan = { title: string; due_at: string | null; remind_at: string | null; notes: string | null };
+
+export const createCollabPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { text: string; now: string; tz: string }) => ({
+    text: String(input.text ?? "").slice(0, 500),
+    now: String(input.now ?? "").slice(0, 80),
+    tz: String(input.tz ?? "UTC").slice(0, 60),
+  }))
+  .handler(async ({ data }): Promise<{ plan: CollabPlan | null; error?: string }> => {
+    try {
+      const text = await ask(
+        `You plan activities for two friends doing something together. Current local time: ${data.now} (timezone ${data.tz}). Turn the idea into one clear shared plan. Reply ONLY with JSON: {"title": short friendly title (max 8 words), "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (default 30 minutes before due_at), "notes": 1-3 short helpful lines (what to bring, steps, place) or null}.`,
+        data.text,
+      );
+      const p = extractJson(text) as Partial<CollabPlan> | null;
+      if (!p?.title) return { plan: null, error: "Could not understand" };
+      const valid = (d: unknown) => (typeof d === "string" && !isNaN(Date.parse(d)) ? new Date(d).toISOString() : null);
+      return { plan: { title: String(p.title).slice(0, 200), due_at: valid(p.due_at), remind_at: valid(p.remind_at), notes: typeof p.notes === "string" ? p.notes.slice(0, 1000) : null } };
+    } catch (e) {
+      if (e instanceof GatewayError) return { plan: null, error: e.message };
+      throw e;
+    }
+  });
