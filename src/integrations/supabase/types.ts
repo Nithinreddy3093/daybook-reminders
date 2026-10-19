@@ -77,6 +77,7 @@ export type Database = {
           kind: string
           plan: Json | null
           plan_status: string | null
+          reactions: Json
           read_at: string | null
           recipient_id: string
           sender_id: string
@@ -89,6 +90,7 @@ export type Database = {
           kind?: string
           plan?: Json | null
           plan_status?: string | null
+          reactions?: Json
           read_at?: string | null
           recipient_id: string
           sender_id?: string
@@ -101,6 +103,7 @@ export type Database = {
           kind?: string
           plan?: Json | null
           plan_status?: string | null
+          reactions?: Json
           read_at?: string | null
           recipient_id?: string
           sender_id?: string
@@ -270,6 +273,7 @@ export type Database = {
           username: string
         }[]
       }
+      react_message: { Args: { _emoji: string; _msg: string }; Returns: Json }
       respond_plan: {
         Args: { _accept: boolean; _msg: string }
         Returns: string
