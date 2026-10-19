@@ -13,6 +13,7 @@ import { fileUrl, reactMessage, sendFile, getThread, markRead, respondPlan, send
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 import { playSound } from "@/lib/sounds";
+import { ContactCard, PROFILE_LINK } from "@/components/ContactCard";
 
 export const Route = createFileRoute("/_authenticated/chat/$id")({
   head: () => ({
@@ -61,6 +62,16 @@ function ChatPage() {
 
   const msgs: Thread["messages"] = thread.data?.messages ?? [];
   const uid = thread.data?.uid;
+  // Follow the phone's visible area so the keyboard sits right under the composer.
+  const [vvh, setVvh] = useState<number | null>(null);
+  const [kbOpen, setKbOpen] = useState(false);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || window.matchMedia("(min-width: 768px)").matches) return;
+    const on = () => { setVvh(vv.height); setKbOpen(window.innerHeight - vv.height > 120); window.scrollTo(0, 0); };
+    on(); vv.addEventListener("resize", on);
+    return () => vv.removeEventListener("resize", on);
+  }, []);
 
   // Realtime: patch the cache directly instead of refetching (faster, no flicker).
   useEffect(() => {
@@ -272,7 +283,7 @@ function ChatPage() {
   const lastMine = last && last.sender_id !== id;
 
   return (
-    <div className="-mx-4 flex h-[calc(100dvh-4.5rem)] flex-col md:mx-0 md:h-[calc(100dvh-6rem)]">
+    <div style={vvh ? { height: `calc(${vvh}px - 4.5rem)` } : undefined} className="-mx-4 flex h-[calc(100dvh-4.5rem)] flex-col md:mx-0 md:h-[calc(100dvh-6rem)]">
       <div className="flex items-center gap-3 border-b px-4 pb-3">
         <Link to="/messages" aria-label="Back" className="rounded-full p-1.5 transition hover:bg-muted active:scale-90"><ArrowLeft className="h-5 w-5" /></Link>
         {p && <Link to="/u/$id" params={{ id }} className="flex min-w-0 items-center gap-3">
@@ -337,6 +348,8 @@ function ChatPage() {
                     {m.plan_status === "declined" && <p className="pt-1 text-xs text-muted-foreground">Declined</p>}
                   </div>
                 </div>
+              ) : m.kind !== "file" && uid && PROFILE_LINK.test(m.content) ? (
+                <div className={m.pending ? "opacity-70" : ""}><ContactCard id={m.content.match(PROFILE_LINK)![1]} myId={uid} /></div>
               ) : emojiOnly ? (
                 <span className={`text-4xl ${m.pending ? "opacity-60" : ""}`}>{m.content}</span>
               ) : m.kind === "file" && m.attachment ? (
@@ -359,7 +372,7 @@ function ChatPage() {
         )}
       </div>
 
-      <div className="relative border-t bg-background px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className={`relative border-t bg-background px-3 pt-2 ${kbOpen ? "pb-2" : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"}`}>
         {!atBottom && (
           <button type="button" aria-label="Scroll to latest" onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })}
             className="keep-bubble-in absolute -top-12 right-4 rounded-full border bg-background p-2 shadow-lg active:scale-90"><ChevronDown className="h-5 w-5" /></button>
