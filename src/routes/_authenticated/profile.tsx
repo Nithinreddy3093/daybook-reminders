@@ -316,3 +316,12 @@ function ProfilePage() {
     </div>
   );
 }
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[90px_1fr] items-start gap-3">
+      <span className="pt-3 text-sm text-muted-foreground">{label}</span>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
