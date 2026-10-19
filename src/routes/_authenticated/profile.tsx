@@ -97,14 +97,27 @@ function ProfilePage() {
   };
   const initials = (name || profile?.email || "?").slice(0, 2).toUpperCase();
 
+  const [editing, setEditing] = useState(false);
+  const [photoMenu, setPhotoMenu] = useState(false);
+  const [saving, setSaving] = useState(false);
   const save = async () => {
-    if (!profile) return;
+    if (!profile) return false;
     const un = username.trim().toLowerCase();
-    if (un && !/^[a-z0-9_.]{3,24}$/.test(un)) { toast.error("Username: 3–24 letters, numbers, _ or ."); return; }
+    if (un && !/^[a-z0-9_.]{3,24}$/.test(un)) { toast.error("Username: 3–24 letters, numbers, _ or ."); return false; }
     const { error } = await supabase.from("profiles").upsert({ id: profile.id, display_name: name.trim().slice(0, 60), username: un || null, bio: bio.trim().slice(0, 200), updated_at: new Date().toISOString() });
-    if (error) { toast.error(error.code === "23505" ? "That username is taken" : error.message); return; }
+    if (error) { toast.error(error.code === "23505" ? "That username is taken" : error.message); return false; }
+    qc.setQueryData(["profile"], { ...profile, display_name: name.trim(), username: un, bio: bio.trim() });
     qc.invalidateQueries({ queryKey: ["profile"] });
     toast("Profile saved");
+    return true;
+  };
+  const shareProfile = async () => {
+    if (!profile) return;
+    const url = `${window.location.origin}/u/${profile.id}`;
+    try {
+      if (navigator.share) await navigator.share({ title: "My Keep profile", url });
+      else { await navigator.clipboard.writeText(url); toast("Profile link copied"); }
+    } catch { /* cancelled */ }
   };
 
   const pickTheme = (t: Theme) => { applyTheme(t); setTheme(t); };
@@ -150,42 +163,73 @@ function ProfilePage() {
     navigate({ to: "/auth", replace: true });
   };
 
+  const photoInput = (
+    <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; setPhotoMenu(false); }} />
+  );
+  const avatarEl = (size: number) => avatar
+    ? <img src={avatar} alt="" style={{ width: size, height: size }} className="rounded-full bg-muted object-cover" />
+    : <div style={{ width: size, height: size, fontSize: size / 2.8 }} className="flex items-center justify-center rounded-full bg-background font-display font-bold">{initials}</div>;
+
   return (
-    <div className="space-y-8">
-      <section className="flex items-center gap-5">
-        <label className="ring-gradient relative shrink-0 cursor-pointer" title="Change photo">
-          {avatar ? <img src={avatar} alt="" className="h-20 w-20 rounded-full object-cover" />
-            : <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background font-display text-2xl font-bold">{initials}</div>}
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground"><Camera className="h-3 w-3" /></span>
-          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; }} />
-        </label>
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold">{name || "Your profile"}</h1>
-          <p className="truncate text-sm text-muted-foreground">{profile?.email}</p>
-          <div className="mt-2 flex gap-5 text-sm">
-            <span><b>{stats.doneTasks}</b> done</span>
-            <span><b>{stats.memories}</b> memories</span>
-            <span className="inline-flex items-center gap-1"><Flame className="h-4 w-4 text-primary" /><b>{myStreak}</b> streak</span>
+    <div className="mx-auto max-w-xl space-y-8">
+      <section className="space-y-4">
+        <div className="flex items-center gap-5 sm:gap-8">
+          <button onClick={() => setPhotoMenu(true)} className="ring-gradient relative shrink-0 rounded-full" aria-label="Profile photo">
+            <div className="rounded-full bg-background p-[3px]">{avatarEl(84)}</div>
+            <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground"><Camera className="h-3 w-3" /></span>
+          </button>
+          <div className="grid flex-1 grid-cols-3 text-center">
+            <div><p className="flex items-center justify-center gap-0.5 font-display text-lg font-bold"><Flame className="h-4 w-4 text-primary" />{myStreak}</p><p className="text-xs text-muted-foreground">streak</p></div>
+            {profile ? <Link to="/follows/$id" params={{ id: profile.id }} search={{ tab: "followers" }}><p className="font-display text-lg font-bold">{profile.followers}</p><p className="text-xs text-muted-foreground">followers</p></Link> : <div />}
+            {profile ? <Link to="/follows/$id" params={{ id: profile.id }} search={{ tab: "following" }}><p className="font-display text-lg font-bold">{profile.following}</p><p className="text-xs text-muted-foreground">following</p></Link> : <div />}
           </div>
-          {profile && <div className="mt-1 flex gap-5 text-sm">
-            <Link to="/follows/$id" params={{ id: profile.id }} search={{ tab: "followers" }}><b>{profile.followers}</b> followers</Link>
-            <Link to="/follows/$id" params={{ id: profile.id }} search={{ tab: "following" }}><b>{profile.following}</b> following</Link>
-          </div>}
+        </div>
+        <div className="min-w-0">
+          <h1 className="truncate font-display text-lg font-semibold">{profile?.display_name || "Your profile"}</h1>
+          {profile?.username && <p className="text-sm text-muted-foreground">@{profile.username}</p>}
+          {profile?.bio && <p className="mt-1 whitespace-pre-wrap break-words text-sm">{profile.bio}</p>}
+          <p className="mt-1 text-xs text-muted-foreground">{stats.doneTasks} done · {stats.memories} memories</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setEditing(true)} className="rounded-xl bg-muted py-2 text-sm font-semibold transition active:scale-[.98]">Edit profile</button>
+          <button onClick={shareProfile} className="rounded-xl bg-muted py-2 text-sm font-semibold transition active:scale-[.98]">Share profile</button>
         </div>
       </section>
 
-      <section className="space-y-3 rounded-2xl border p-5">
-        <h2 className="font-semibold">About you</h2>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Display name" maxLength={60}
-          className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username (so friends can find you)" maxLength={24}
-          className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short bio" maxLength={200} rows={2}
-          className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
-        <button onClick={save} className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">Save</button>
-      </section>
+      {photoMenu && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
+          <div className="w-full max-w-sm space-y-4 rounded-t-3xl bg-background p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-center md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto w-fit">{avatarEl(220)}</div>
+            <div className="divide-y overflow-hidden rounded-2xl border text-sm font-semibold">
+              <label className="block cursor-pointer py-3 text-primary">{avatar ? "Change photo" : "Add photo"}{photoInput}</label>
+              {avatar && <button onClick={() => { removePhoto(); setPhotoMenu(false); }} className="block w-full py-3 text-destructive">Remove photo</button>}
+              <button onClick={() => setPhotoMenu(false)} className="block w-full py-3">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {avatar && <button onClick={removePhoto} className="-mt-6 text-xs text-muted-foreground underline">Remove photo</button>}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background">
+          <div className="flex h-14 items-center justify-between border-b px-4 pt-[env(safe-area-inset-top)]">
+            <button onClick={() => { setEditing(false); if (profile) { setName(profile.display_name); setBio(profile.bio); setUsername(profile.username); } }} className="text-sm">Cancel</button>
+            <p className="font-display font-semibold">Edit profile</p>
+            <button disabled={saving} onClick={async () => { setSaving(true); if (await save()) setEditing(false); setSaving(false); }} className="text-sm font-semibold text-brand-2 disabled:opacity-50">{saving ? "Saving…" : "Done"}</button>
+          </div>
+          <div className="mx-auto w-full max-w-xl flex-1 overflow-y-auto p-5">
+            <div className="flex flex-col items-center gap-2">
+              {avatarEl(96)}
+              <label className="cursor-pointer text-sm font-semibold text-brand-2">Change profile photo{photoInput}</label>
+            </div>
+            <div className="mt-6 divide-y border-y">
+              <Field label="Name"><input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} placeholder="Name" className="w-full bg-transparent py-3 outline-none" /></Field>
+              <Field label="Username"><div className="flex items-center"><span className="text-muted-foreground">@</span><input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ""))} maxLength={24} placeholder="username" autoCapitalize="none" className="w-full bg-transparent py-3 outline-none" /></div></Field>
+              <Field label="Bio"><textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={200} rows={3} placeholder="Bio" className="w-full resize-none bg-transparent py-3 outline-none" /><p className="pb-2 text-right text-xs text-muted-foreground">{bio.length}/200</p></Field>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Friends only see your photo, name, username, bio and streak.</p>
+          </div>
+        </div>
+      )}
 
       <section className="space-y-2 rounded-2xl border p-5">
         <h2 className="font-semibold">Who can see your plans</h2>
