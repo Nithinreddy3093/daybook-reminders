@@ -203,7 +203,21 @@ function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const [heart, setHeart] = useState<string | null>(null);
-  const like = (mid: string) => { tap([8, 40, 8]); setHeart(mid); setTimeout(() => setHeart(null), 700); send("❤️"); };
+  const react = async (mid: string, emoji = "❤️") => {
+    if (!uid || mid.startsWith("tmp-")) return;
+    const cur = msgs.find((m) => m.id === mid)?.reactions ?? {};
+    const removing = cur[uid] === emoji;
+    if (!removing) { tap([8, 40, 8]); setHeart(mid); setTimeout(() => setHeart(null), 700); }
+    const next = { ...cur }; if (removing) delete next[uid]; else next[uid] = emoji;
+    qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid ? { ...m, reactions: next } : m) } : old);
+    try { await reactMessage(mid, emoji); } catch { toast.error("Couldn't react"); qc.invalidateQueries({ queryKey: key }); }
+  };
+  const lastTap = useRef<{ id: string; t: number }>({ id: "", t: 0 });
+  const onBubbleTouch = (mid: string, e: React.TouchEvent) => {
+    const now = e.timeStamp;
+    if (lastTap.current.id === mid && now - lastTap.current.t < 300) { e.preventDefault(); lastTap.current = { id: "", t: 0 }; react(mid); }
+    else lastTap.current = { id: mid, t: now };
+  };
 
   // Voice notes
   const [recording, setRecording] = useState(false);
@@ -271,7 +285,15 @@ function ChatPage() {
             ? `rounded-3xl ${prevSame ? "rounded-tr-md" : ""} ${nextSame ? "rounded-br-md" : ""}`
             : `rounded-3xl ${prevSame ? "rounded-tl-md" : ""} ${nextSame ? "rounded-bl-md" : ""}`;
           return (
-            <div key={m.id} className={`keep-bubble-in flex ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"}`}>
+            <div key={m.id} className={`relative flex ${i >= msgs.length - 3 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
+              onDoubleClick={() => react(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
+              {heart === m.id && <span className={`keep-heart absolute top-1/2 z-10 -translate-y-1/2 text-4xl ${mine ? "right-8" : "left-8"}`}>❤️</span>}
+              {m.reactions && Object.keys(m.reactions).length > 0 && (
+                <button type="button" onClick={(e) => { e.stopPropagation(); if (uid && m.reactions?.[uid]) react(m.id, m.reactions[uid]); }}
+                  aria-label="Reactions" className={`absolute -bottom-3 z-10 flex items-center gap-0.5 rounded-full border bg-background px-1.5 py-0.5 text-xs shadow-sm ${mine ? "right-2" : "left-2"}`}>
+                  {[...new Set(Object.values(m.reactions))].join("")}{Object.keys(m.reactions).length > 1 && <span className="text-[10px] text-muted-foreground">{Object.keys(m.reactions).length}</span>}
+                </button>
+              )}
               {m.kind === "plan" && m.plan ? (
                 <div className={`w-64 overflow-hidden rounded-3xl border bg-background ${m.pending ? "opacity-70" : ""}`}>
                   <div className="bg-gradient-brand px-4 py-2 text-xs font-semibold text-primary-foreground">📅 Plan together</div>
