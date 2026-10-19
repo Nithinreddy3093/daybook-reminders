@@ -29,6 +29,13 @@
       "when": 1792311749842,
       "tag": "0003_social_follows",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792392138608,
+      "tag": "0004_fix_streak_trigger",
+      "breakpoints": true
     }
   ]
 }
