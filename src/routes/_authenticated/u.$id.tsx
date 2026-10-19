@@ -44,6 +44,7 @@ function UserPage() {
   const name = p.display_name || p.username || "Keep user";
   const theirs = share.data?.theirs;
   const mine = share.data?.mine;
+  const isSelf = share.data?.uid === id;
 
   return (
     <div className="mx-auto max-w-xl space-y-5">
@@ -62,6 +63,9 @@ function UserPage() {
         {p.bio && <p className="mt-1 whitespace-pre-wrap text-sm">{p.bio}</p>}
       </div>
 
+      {isSelf ? (
+        <Link to="/profile" className="flex w-full items-center justify-center rounded-full bg-muted px-4 py-1.5 text-sm font-semibold transition active:scale-95">Edit profile</Link>
+      ) : (<>
       <div className="grid grid-cols-2 gap-2 [&>*]:w-full">
         <FollowButton id={p.id} />
         <Link to="/chat/$id" params={{ id: p.id }} className="flex items-center justify-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-semibold transition active:scale-95">
@@ -88,8 +92,11 @@ function UserPage() {
           Let {name} see your plans
         </button>
       )}
+      </>)}
 
-      <div className="border-t pt-4">
+      {isSelf ? (
+        <p className="border-t pt-4 text-center text-sm text-muted-foreground">This is how others see your profile.</p>
+      ) : <div className="border-t pt-4">
         {canSee ? (
           <section className="space-y-2">
             <div className="flex items-center justify-between">
@@ -117,7 +124,7 @@ function UserPage() {
             )}
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }

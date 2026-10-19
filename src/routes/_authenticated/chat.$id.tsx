@@ -69,8 +69,14 @@ function ChatPage() {
     const vv = window.visualViewport;
     if (!vv || window.matchMedia("(min-width: 768px)").matches) return;
     const on = () => { setVvh(vv.height); setKbOpen(window.innerHeight - vv.height > 120); window.scrollTo(0, 0); };
-    on(); vv.addEventListener("resize", on);
-    return () => vv.removeEventListener("resize", on);
+    on(); vv.addEventListener("resize", on); vv.addEventListener("scroll", on);
+    const html = document.documentElement, body = document.body;
+    const prev = [html.style.overflow, body.style.overflow, body.style.overscrollBehavior];
+    html.style.overflow = "hidden"; body.style.overflow = "hidden"; body.style.overscrollBehavior = "none";
+    return () => {
+      vv.removeEventListener("resize", on); vv.removeEventListener("scroll", on);
+      html.style.overflow = prev[0] ?? ""; body.style.overflow = prev[1] ?? ""; body.style.overscrollBehavior = prev[2] ?? "";
+    };
   }, []);
 
   // Realtime: patch the cache directly instead of refetching (faster, no flicker).
@@ -283,8 +289,8 @@ function ChatPage() {
   const lastMine = last && last.sender_id !== id;
 
   return (
-    <div style={vvh ? { height: `calc(${vvh}px - 4.5rem)` } : undefined} className="-mx-4 flex h-[calc(100dvh-4.5rem)] flex-col md:mx-0 md:h-[calc(100dvh-6rem)]">
-      <div className="flex items-center gap-3 border-b px-4 pb-3">
+    <div style={vvh ? { height: `${vvh}px` } : undefined} className="fixed inset-x-0 top-0 z-20 flex h-[100dvh] flex-col overscroll-none bg-background pt-[env(safe-area-inset-top)] md:static md:z-auto md:h-[calc(100dvh-6rem)] md:pt-0">
+      <div className="flex items-center gap-3 border-b px-4 pb-3 pt-2 md:pt-0">
         <Link to="/messages" aria-label="Back" className="rounded-full p-1.5 transition hover:bg-muted active:scale-90"><ArrowLeft className="h-5 w-5" /></Link>
         {p && <Link to="/u/$id" params={{ id }} className="flex min-w-0 items-center gap-3">
           <span className="relative"><Avatar p={p} size={40} />{online && <span aria-label="Online" className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-[hsl(142_70%_45%)]" />}</span>
