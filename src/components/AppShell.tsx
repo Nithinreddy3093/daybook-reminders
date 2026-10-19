@@ -158,20 +158,26 @@ function InboxLink() {
 function QuickCapture() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
   return (
     <>
-      <button onClick={() => setOpen(true)} aria-label="Quick capture"
-        className="fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-brand text-primary-foreground shadow-lg md:bottom-8 md:right-8">
+      <button onClick={() => { tap(); setOpen(true); }} aria-label="Quick capture"
+        className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 flex h-14 w-14 touch-manipulation items-center justify-center rounded-full bg-gradient-brand text-primary-foreground shadow-lg transition active:scale-95 md:bottom-8 md:right-8">
         <Plus className="h-7 w-7" />
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 md:items-center" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-lg space-y-4 rounded-t-3xl bg-background p-5 md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-foreground/40 md:items-center" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-lg space-y-4 rounded-t-3xl bg-background p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <p className="font-display text-lg font-bold">Quick capture</p>
               <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-full p-1.5 hover:bg-muted"><X className="h-5 w-5" /></button>
             </div>
-            <QuickAdd autoFocus onDone={() => setOpen(false)} />
+            <QuickAdd autoFocus={typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches} onDone={() => setOpen(false)} />
             <button onClick={() => { setOpen(false); navigate({ to: "/memories" }); }}
               className="w-full rounded-full border py-2 text-sm font-medium hover:bg-muted">Save a photo, file or note instead</button>
           </div>
