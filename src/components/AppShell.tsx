@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery } from "@/lib/data";
 import { unreadCount } from "@/lib/messages";
+import { playSound, unlockAudioOnGesture } from "@/lib/sounds";
 
 const nav = [
   { to: "/home", label: "Home", icon: Home },
@@ -46,7 +47,8 @@ function ReminderWatcher() {
             ),
             duration: 60000,
           });
-          if ("Notification" in window && Notification.permission === "granted") {
+          playSound("reminder");
+          if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== "visible") {
             new Notification("Reminder", { body: t.title, icon: "/icon-512.png" });
           }
         }
@@ -61,6 +63,14 @@ function ReminderWatcher() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { applyTheme(readTheme()); }, []);
+  useEffect(() => {
+    unlockAudioOnGesture();
+    if (!("serviceWorker" in navigator)) return;
+    const onMsg = (e: MessageEvent) => { if (e.data?.type === "keep-push") playSound(e.data.sound === "received" ? "received" : "reminder"); };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+  }, []);
+  const inChat = useRouterState({ select: (s) => s.location.pathname.startsWith("/chat/") });
   const askNotify = async () => {
     if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
     const p = await Notification.requestPermission();
