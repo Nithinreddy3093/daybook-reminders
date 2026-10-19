@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 import { FollowButton } from "@/components/FollowButton";
-import { FriendRequestButton } from "@/components/FriendRequestButton";
 import { approve, removeShare, requestAccess, shareState, sharedTasks } from "@/lib/shares";
 
 export const Route = createFileRoute("/_authenticated/u/$id")({
@@ -63,9 +62,8 @@ function UserPage() {
         {p.bio && <p className="mt-1 whitespace-pre-wrap text-sm">{p.bio}</p>}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 [&>*]:w-full">
+      <div className="grid grid-cols-2 gap-2 [&>*]:w-full">
         <FollowButton id={p.id} />
-        <FriendRequestButton id={p.id} />
         <Link to="/chat/$id" params={{ id: p.id }} className="flex items-center justify-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-sm font-semibold transition active:scale-95">
           <MessageCircle className="h-4 w-4" /> Message
         </Link>

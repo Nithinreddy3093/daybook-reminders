@@ -3,7 +3,8 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
-import { Home, ListChecks, Image as ImageIcon, User, Bell, Plus, X, Search, Send } from "lucide-react";
+import { ActivityBell } from "@/components/ActivityBell";
+import { Home, ListChecks, Image as ImageIcon, User, Plus, X, Search, Send } from "lucide-react";
 import { toggleTask } from "@/lib/tasks";
 import { applyTheme, readTheme } from "@/lib/theme";
 import { toast } from "sonner";
@@ -73,11 +74,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
   const inChat = useRouterState({ select: (s) => s.location.pathname.startsWith("/chat/") });
   const showFab = useRouterState({ select: (s) => ["/home", "/plans"].includes(s.location.pathname) });
-  const askNotify = async () => {
-    if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
-    const p = await Notification.requestPermission();
-    toast(p === "granted" ? "Notifications on" : "Notifications blocked");
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,9 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Search className="h-5 w-5" />
             </Link>
             <InboxLink />
-            <button onClick={askNotify} aria-label="Enable notifications" className="rounded-full p-2 hover:bg-muted">
-              <Bell className="h-5 w-5" />
-            </button>
+            <ActivityBell />
           </div>
         </div>
       </header>

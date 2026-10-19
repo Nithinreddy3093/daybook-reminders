@@ -28,3 +28,14 @@ export async function respondRequest(sender: string, accept: boolean) {
   const { error } = await supabase.rpc("respond_friend_request", { _sender: sender, _accept: accept });
   if (error) throw error;
 }
+
+export async function incomingIds(): Promise<string[]> {
+  const { data: u } = await supabase.auth.getUser();
+  const { data } = await supabase.from("friend_requests").select("sender_id").eq("receiver_id", u.user!.id);
+  return (data ?? []).map((r) => r.sender_id);
+}
+
+export async function unfriend(id: string) {
+  const { error } = await supabase.rpc("unfriend", { _other: id });
+  if (error) throw error;
+}
