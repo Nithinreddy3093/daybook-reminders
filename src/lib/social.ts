@@ -56,3 +56,20 @@ export async function setFollow(id: string, follow: boolean) {
 
 export const initials = (p: { display_name?: string | null; username?: string | null }) =>
   (p.display_name || p.username || "?").slice(0, 2).toUpperCase();
+
+export async function getFollowList(id: string, tab: "followers" | "following"): Promise<PublicProfile[]> {
+  const col = tab === "followers" ? "following_id" : "follower_id";
+  const other = tab === "followers" ? "follower_id" : "following_id";
+  const { data } = await supabase.from("follows").select(other).eq(col, id).limit(500);
+  const ids = (data ?? []).map((r) => (r as Record<string, string>)[other]);
+  if (!ids.length) return [];
+  const { data: ps } = await supabase.from("profiles").select(COLS).in("id", ids);
+  return (ps ?? []) as PublicProfile[];
+}
+
+/** The signed-in user's own streak, from the same source friends see. */
+export async function getMyStreak() {
+  const uid = await me();
+  const { data } = await supabase.from("profiles").select("streak, last_active").eq("id", uid).maybeSingle();
+  return data ? liveStreak(data) : 0;
+}

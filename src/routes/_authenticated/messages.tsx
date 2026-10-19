@@ -43,7 +43,7 @@ function InboxPage() {
           <div className="divide-y">
             {data.threads.map((t) => (
               <Link key={t.id} to="/chat/$id" params={{ id: t.id }} className="flex items-center gap-3 py-3">
-                <Avatar p={t.profile ?? { display_name: "?", username: null }} size={52} />
+                <Avatar p={t.profile ?? { id: t.id, display_name: "?", username: null, bio: null, streak: 0, last_active: null }} size={52} />
                 <div className="min-w-0 flex-1">
                   <p className={`truncate text-sm ${t.unread ? "font-bold" : "font-semibold"}`}>{t.profile?.display_name || t.profile?.username || "Keep user"}</p>
                   <p className={`truncate text-sm ${t.unread ? "text-foreground" : "text-muted-foreground"}`}>
