@@ -43,6 +43,13 @@
       "when": 1792392615759,
       "tag": "0005_messages_push",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792395081798,
+      "tag": "0006_tighten_social_reads",
+      "breakpoints": true
     }
   ]
 }
