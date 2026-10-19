@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Bell, Plus, Trash2, Check, Repeat, List, CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Bell, Plus, Trash2, Check, Repeat, List, CalendarDays, ChevronLeft, ChevronRight, Clock, Pencil } from "lucide-react";
+import { tap } from "@/lib/haptics";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery, fmtWhen } from "@/lib/data";
@@ -127,7 +128,7 @@ function PlansPage() {
             <p className="py-12 text-center text-sm text-muted-foreground">Nothing here yet.</p>
           ) : (
             <ul className="divide-y rounded-2xl border">
-              {filtered.map((t) => <TaskRow key={t.id} t={t} onToggle={toggle} onRemove={remove} />)}
+              {filtered.map((t) => <TaskRow key={t.id} t={t} onToggle={toggle} onRemove={remove} onChanged={refresh} />)}
             </ul>
           )}
         </>
@@ -138,26 +139,86 @@ function PlansPage() {
   );
 }
 
-function TaskRow({ t, onToggle, onRemove }: { t: Task; onToggle: (t: Task) => void; onRemove: (id: string) => void }) {
+function TaskRow({ t, onToggle, onRemove, onChanged }: { t: Task; onToggle: (t: Task) => void; onRemove: (id: string) => void; onChanged: () => void }) {
+  const [dx, setDx] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [drag, setDrag] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(t.title);
+  const start = useRef<{ x: number; y: number; base: number; lock?: "h" | "v" } | null>(null);
+  const OPEN = -144;
+
+  const down = (e: React.PointerEvent) => { if (editing) return; start.current = { x: e.clientX, y: e.clientY, base: open ? OPEN : 0 }; };
+  const move = (e: React.PointerEvent) => {
+    const s = start.current; if (!s) return;
+    const mx = e.clientX - s.x, my = e.clientY - s.y;
+    if (!s.lock) { if (Math.abs(mx) < 8 && Math.abs(my) < 8) return; s.lock = Math.abs(mx) > Math.abs(my) ? "h" : "v"; if (s.lock === "h") { setDrag(true); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } }
+    if (s.lock !== "h") return;
+    let v = s.base + mx;
+    if (v > 120) v = 120 + (v - 120) * 0.3;
+    if (v < -200) v = -200 + (v + 200) * 0.3;
+    setDx(v);
+  };
+  const up = () => {
+    const s = start.current; start.current = null;
+    if (!s || s.lock !== "h") return;
+    setDrag(false);
+    if (dx > 80) { tap(15); setDx(0); setOpen(false); onToggle(t); return; }
+    if (dx < -60) { tap(); setDx(OPEN); setOpen(true); } else { setDx(0); setOpen(false); }
+  };
+  const close = () => { setDx(0); setOpen(false); };
+  const snooze = async () => {
+    const base = Math.max(Date.now(), t.remind_at ? new Date(t.remind_at).getTime() : 0);
+    const when = new Date(base + 60 * 60 * 1000).toISOString();
+    close();
+    const { error } = await supabase.from("tasks").update({ remind_at: when, push_sent_for: null }).eq("id", t.id);
+    if (error) toast.error(error.message); else { toast("Snoozed 1 hour"); onChanged(); }
+  };
+  const saveEdit = async () => {
+    setEditing(false);
+    const v = text.trim(); if (!v || v === t.title) { setText(t.title); return; }
+    const { error } = await supabase.from("tasks").update({ title: v }).eq("id", t.id);
+    if (error) toast.error(error.message); else onChanged();
+  };
+
   return (
-    <li className="group flex items-center gap-3 px-4 py-3">
-      <button onClick={() => onToggle(t)} aria-label="Toggle done"
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? "border-transparent bg-gradient-brand text-primary-foreground" : ""}`}>
-        {t.done && <Check className="h-3.5 w-3.5" />}
-      </button>
-      <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm ${t.done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          {t.priority !== "normal" && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${priorityStyle[t.priority]}`}>{t.priority}</span>}
-          {t.category && <span>#{t.category}</span>}
-          {t.due_at && <span>Due {fmtWhen(t.due_at)}</span>}
-          {t.remind_at && <span className="flex items-center gap-1"><Bell className="h-3 w-3" />{fmtWhen(t.remind_at)}</span>}
-          {t.recurrence !== "none" && <span className="flex items-center gap-1 capitalize"><Repeat className="h-3 w-3" />{t.recurrence}</span>}
-        </p>
+    <li className="relative overflow-hidden">
+      <div className="absolute inset-0 flex items-center justify-between">
+        <div className={`flex h-full items-center bg-gradient-brand px-5 text-primary-foreground transition-opacity ${dx > 0 ? "opacity-100" : "opacity-0"}`} style={{ width: Math.max(dx, 0) + 40 }}>
+          <Check className={`h-5 w-5 transition-transform ${dx > 80 ? "scale-125" : ""}`} />
+        </div>
+        <div className={`flex h-full ${dx < 0 ? "opacity-100" : "opacity-0"}`}>
+          <button onClick={snooze} className="flex w-[72px] flex-col items-center justify-center gap-0.5 bg-accent text-[11px] font-semibold"><Clock className="h-4 w-4" />Snooze</button>
+          <button onClick={() => { close(); setEditing(true); }} className="flex w-[72px] flex-col items-center justify-center gap-0.5 bg-foreground text-[11px] font-semibold text-background"><Pencil className="h-4 w-4" />Edit</button>
+        </div>
       </div>
-      <button onClick={() => onRemove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-muted md:opacity-0 md:group-hover:opacity-100">
-        <Trash2 className="h-4 w-4" />
-      </button>
+      <div
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        style={{ transform: `translate3d(${dx}px,0,0)`, transition: drag ? "none" : "transform .45s cubic-bezier(.2,1.4,.4,1)", touchAction: "pan-y" }}
+        className="group relative flex items-center gap-3 bg-background px-4 py-3">
+        <button onClick={() => onToggle(t)} aria-label="Toggle done"
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${t.done ? "border-transparent bg-gradient-brand text-primary-foreground" : ""}`}>
+          {t.done && <Check className="h-3.5 w-3.5" />}
+        </button>
+        <div className="min-w-0 flex-1" onClick={() => open && close()}>
+          {editing ? (
+            <input autoFocus value={text} onChange={(e) => setText(e.target.value)} onBlur={saveEdit} onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); if (e.key === "Escape") { setText(t.title); setEditing(false); } }}
+              className="w-full rounded-md bg-muted px-2 py-1 text-base outline-none md:text-sm" />
+          ) : (
+            <p className={`truncate text-sm ${t.done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
+          )}
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {t.priority !== "normal" && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${priorityStyle[t.priority]}`}>{t.priority}</span>}
+            {t.category && <span>#{t.category}</span>}
+            {t.due_at && <span>Due {fmtWhen(t.due_at)}</span>}
+            {t.remind_at && <span className="flex items-center gap-1"><Bell className="h-3 w-3" />{fmtWhen(t.remind_at)}</span>}
+            {t.recurrence !== "none" && <span className="flex items-center gap-1 capitalize"><Repeat className="h-3 w-3" />{t.recurrence}</span>}
+          </p>
+        </div>
+        <button onClick={() => onRemove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-muted md:opacity-0 md:group-hover:opacity-100">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </li>
   );
 }
