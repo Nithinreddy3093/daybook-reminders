@@ -329,6 +329,7 @@ export type Database = {
           username: string
         }[]
       }
+      unfriend: { Args: { _other: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
