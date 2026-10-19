@@ -183,6 +183,24 @@ function ProfilePage() {
         <button onClick={save} className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">Save</button>
       </section>
 
+      {avatar && <button onClick={removePhoto} className="-mt-6 text-xs text-muted-foreground underline">Remove photo</button>}
+
+      <section className="space-y-2 rounded-2xl border p-5">
+        <h2 className="font-semibold">Who can see your plans</h2>
+        <p className="text-xs text-muted-foreground">Only people you accept can see your plans. Memories always stay private.</p>
+        {!shares.length && <p className="text-sm text-muted-foreground">Nobody yet.</p>}
+        {shares.map((s) => s.profile && (
+          <ProfileRow key={s.viewer_id} p={s.profile} action={s.status === "pending" ? (
+            <div className="flex gap-1">
+              <button onClick={() => shareAct(() => approve(s.viewer_id))} className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Accept</button>
+              <button onClick={() => shareAct(() => removeShare(s.owner_id, s.viewer_id))} className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">Decline</button>
+            </div>
+          ) : (
+            <button onClick={() => shareAct(() => removeShare(s.owner_id, s.viewer_id))} className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">Remove</button>
+          )} />
+        ))}
+      </section>
+
       <section>
         <h2 className="mb-3 font-semibold">Badges</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
