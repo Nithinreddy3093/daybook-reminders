@@ -39,7 +39,7 @@ function ChatPage() {
   const input = useRef<HTMLTextAreaElement>(null);
   const first = useRef(true);
 
-  const msgs = thread.data?.messages ?? [];
+  const msgs: Thread["messages"] = thread.data?.messages ?? [];
   const uid = thread.data?.uid;
 
   // Realtime: patch the cache directly instead of refetching (faster, no flicker).
