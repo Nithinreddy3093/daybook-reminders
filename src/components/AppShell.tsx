@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery } from "@/lib/data";
 import { unreadCount } from "@/lib/messages";
+import { playSound, unlockAudioOnGesture } from "@/lib/sounds";
 
 const nav = [
   { to: "/home", label: "Home", icon: Home },
@@ -46,7 +47,8 @@ function ReminderWatcher() {
             ),
             duration: 60000,
           });
-          if ("Notification" in window && Notification.permission === "granted") {
+          playSound("reminder");
+          if ("Notification" in window && Notification.permission === "granted" && document.visibilityState !== "visible") {
             new Notification("Reminder", { body: t.title, icon: "/icon-512.png" });
           }
         }
@@ -61,6 +63,14 @@ function ReminderWatcher() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { applyTheme(readTheme()); }, []);
+  useEffect(() => {
+    unlockAudioOnGesture();
+    if (!("serviceWorker" in navigator)) return;
+    const onMsg = (e: MessageEvent) => { if (e.data?.type === "keep-push") playSound(e.data.sound === "received" ? "received" : "reminder"); };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+  }, []);
+  const inChat = useRouterState({ select: (s) => s.location.pathname.startsWith("/chat/") });
   const askNotify = async () => {
     if (!("Notification" in window)) { toast.error("Notifications are not supported on this device"); return; }
     const p = await Notification.requestPermission();
@@ -101,9 +111,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="keep-reveal mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12">{children}</main>
-      <QuickCapture />
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden">
+      <main className={`keep-reveal mx-auto max-w-5xl px-4 ${inChat ? "pb-4 pt-3" : "pb-28 pt-6 md:pb-12"}`}>{children}</main>
+      {!inChat && <QuickCapture />}
+      <nav className={`fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden ${inChat ? "hidden" : ""}`}>
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
           {nav.map((n) => (
             <Link
@@ -127,8 +137,14 @@ function InboxLink() {
   const qc = useQueryClient();
   const { data: n = 0 } = useQuery({ queryKey: ["unread"], queryFn: unreadCount, refetchInterval: 60000 });
   useEffect(() => {
+    let uid: string | undefined;
+    supabase.auth.getUser().then(({ data }) => { uid = data.user?.id; });
     const ch = supabase.channel("unread-badge")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => qc.invalidateQueries({ queryKey: ["unread"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
+        qc.invalidateQueries({ queryKey: ["unread"] });
+        const row = p.new as { recipient_id?: string } | undefined;
+        if (p.eventType === "INSERT" && uid && row?.recipient_id === uid) playSound("received");
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [qc]);

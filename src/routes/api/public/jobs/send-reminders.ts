@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/public/jobs/send-reminders")({
           const { data: subs } = await supabaseAdmin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", t.user_id);
           for (const s of subs ?? []) {
             try {
-              const r = await sendPush(s, { title: "⏰ Reminder", body: t.title, url: "/plans", tag: t.id });
+              const r = await sendPush(s, { title: "⏰ Reminder", body: t.title, url: "/plans", tag: t.id, sound: "reminder" });
               if (r === "gone") await supabaseAdmin.from("push_subscriptions").delete().eq("id", s.id);
               if (r === "ok") sent++;
             } catch { /* keep going */ }
