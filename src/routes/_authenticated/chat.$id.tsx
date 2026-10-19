@@ -7,7 +7,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { createCollabPlan, type CollabPlan } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { fileUrl, sendFile, getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
+import { fileUrl, reactMessage, sendFile, getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 import { playSound } from "@/lib/sounds";
@@ -317,9 +317,8 @@ function ChatPage() {
               ) : m.kind === "file" && m.attachment ? (
                 <AttachmentBubble a={m.attachment} mine={mine} caption={/^(📷 Photo|🎬 Video|🎤 Voice note|📎 )/u.test(m.content) ? "" : m.content} />
               ) : (
-                <div onDoubleClick={() => !mine && like(m.id)} onTouchEnd={(e) => { if (mine) return; const now = e.timeStamp; const el = e.currentTarget as HTMLElement & { _lt?: number }; if (el._lt && now - el._lt < 300) { e.preventDefault(); like(m.id); el._lt = 0; } else el._lt = now; }} style={{ touchAction: "manipulation" }} className={`relative max-w-[78%] select-text whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
+                <div className={`relative max-w-[78%] select-text whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
                   {m.content}
-                  {heart === m.id && <span className="keep-heart absolute -bottom-3 -right-2 text-2xl">❤️</span>}
                 </div>
               )}
             </div>
