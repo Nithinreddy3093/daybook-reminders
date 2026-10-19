@@ -72,7 +72,7 @@ export async function sendFile(to: string, file: File, caption = "") {
   const path = `${uid}/${to}/${crypto.randomUUID()}-${safe}`;
   const up = await supabase.storage.from("chat-files").upload(path, file, { contentType: file.type || "application/octet-stream" });
   if (up.error) throw up.error;
-  const icon = file.type.startsWith("image/") ? "📷 Photo" : file.type.startsWith("video/") ? "🎬 Video" : `📎 ${file.name}`;
+  const icon = file.type.startsWith("image/") ? "📷 Photo" : file.type.startsWith("video/") ? "🎬 Video" : file.type.startsWith("audio/") ? "🎤 Voice note" : `📎 ${file.name}`;
   const attachment: Attachment = { path, name: file.name, type: file.type, size: file.size };
   const { error } = await supabase.from("messages").insert({ sender_id: uid, recipient_id: to, content: (caption.trim() || icon).slice(0, 2000), kind: "file", attachment });
   if (error) throw error;

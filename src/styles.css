@@ -131,18 +131,20 @@
   position: fixed; inset: 0; z-index: 9999;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem;
   background: var(--background);
-  animation: keep-splash-out 0.5s ease 1.3s forwards;
+  animation: keep-splash-out 0.3s cubic-bezier(.4,0,.2,1) 0.6s forwards;
+  will-change: opacity, transform;
 }
 .keep-splash-logo {
   width: 96px; height: 96px; border-radius: 26px; object-fit: cover; display: block;
   box-shadow: 0 20px 50px -15px rgba(221, 42, 123, 0.55);
-  animation: keep-splash-pop 0.9s cubic-bezier(.2,.9,.3,1.3) both;
+  animation: keep-splash-pop 0.55s cubic-bezier(.2,.9,.3,1.25) both;
+  will-change: transform, opacity;
 }
 .keep-splash-glyph { font-family: Sora, sans-serif; font-weight: 700; font-size: 44px; color: #fff; }
 .keep-splash-word {
   font-family: Sora, sans-serif; font-weight: 600; font-size: 1.25rem; letter-spacing: -0.02em;
   color: var(--foreground); opacity: 0;
-  animation: keep-splash-fade 0.5s ease 0.45s forwards;
+  animation: keep-splash-fade 0.3s ease 0.2s forwards;
 }
 @keyframes keep-splash-pop {
   0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
@@ -165,8 +167,13 @@
 @media (prefers-reduced-motion: reduce) { .keep-reveal > * { animation: none; } }
 
 /* Chat bubbles */
-.keep-bubble-in { animation: keep-bubble 0.16s ease-out both; }
-@keyframes keep-bubble { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+.keep-bubble-in { animation: keep-bubble 0.18s cubic-bezier(.2,.9,.3,1.15) both; }
+@keyframes keep-bubble { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.keep-heart { animation: keep-heart 0.7s cubic-bezier(.2,.9,.3,1.3) forwards; pointer-events: none; }
+@keyframes keep-heart { 0% { opacity: 0; transform: scale(0.3); } 30% { opacity: 1; transform: scale(1.2); } 70% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1) translateY(-10px); } }
+@media (prefers-reduced-motion: reduce) { .keep-bubble-in, .keep-heart { animation-duration: 0.01s; } }
+html { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
 
 @utility no-scrollbar {
   scrollbar-width: none;

@@ -1,3 +1,4 @@
+import { tap } from "@/lib/haptics";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -115,7 +116,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
           {nav.map((n) => (
             <Link
-              key={n.to}
+              key={n.to} onClick={() => tap()}
               to={n.to}
               aria-label={n.label}
               className="flex flex-col items-center gap-1 px-4 text-[11px] text-muted-foreground"
