@@ -32,6 +32,27 @@ export type Database = {
         }
         Relationships: []
       }
+      friend_requests: {
+        Row: {
+          created_at: string
+          receiver_id: string
+          sender_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          receiver_id: string
+          sender_id?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          receiver_id?: string
+          sender_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       memories: {
         Row: {
           caption: string | null
@@ -263,6 +284,17 @@ export type Database = {
           id: string
         }[]
       }
+      incoming_friend_requests: {
+        Args: never
+        Returns: {
+          bio: string
+          display_name: string
+          id: string
+          last_active: string
+          streak: number
+          username: string
+        }[]
+      }
       is_connected: { Args: { _other: string }; Returns: boolean }
       public_profile: {
         Args: { _id: string }
@@ -278,6 +310,10 @@ export type Database = {
         }[]
       }
       react_message: { Args: { _emoji: string; _msg: string }; Returns: Json }
+      respond_friend_request: {
+        Args: { _accept: boolean; _sender: string }
+        Returns: undefined
+      }
       respond_plan: {
         Args: { _accept: boolean; _msg: string }
         Returns: string
