@@ -70,7 +70,7 @@ export async function sendFile(to: string, file: File, caption = "") {
   const uid = await me();
   const safe = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
   const path = `${uid}/${to}/${crypto.randomUUID()}-${safe}`;
-  const up = await supabase.storage.from("chat-files").upload(path, file, { contentType: file.type || undefined });
+  const up = await supabase.storage.from("chat-files").upload(path, file, { contentType: file.type || "application/octet-stream" });
   if (up.error) throw up.error;
   const icon = file.type.startsWith("image/") ? "📷 Photo" : file.type.startsWith("video/") ? "🎬 Video" : `📎 ${file.name}`;
   const attachment: Attachment = { path, name: file.name, type: file.type, size: file.size };
