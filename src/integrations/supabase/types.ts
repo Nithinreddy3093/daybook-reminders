@@ -68,6 +68,33 @@ export type Database = {
         }
         Relationships: []
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          read_at: string | null
+          recipient_id: string
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id: string
+          sender_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          recipient_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           bio: string | null
@@ -98,6 +125,33 @@ export type Database = {
         }
         Relationships: []
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id?: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category: string | null
@@ -107,6 +161,7 @@ export type Database = {
           id: string
           notes: string | null
           priority: string
+          push_sent_for: string | null
           recurrence: string
           remind_at: string | null
           title: string
@@ -120,6 +175,7 @@ export type Database = {
           id?: string
           notes?: string | null
           priority?: string
+          push_sent_for?: string | null
           recurrence?: string
           remind_at?: string | null
           title: string
@@ -133,6 +189,7 @@ export type Database = {
           id?: string
           notes?: string | null
           priority?: string
+          push_sent_for?: string | null
           recurrence?: string
           remind_at?: string | null
           title?: string

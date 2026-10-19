@@ -15,9 +15,13 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedFriendsRouteImport } from './routes/_authenticated/friends'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedMemoriesRouteImport } from './routes/_authenticated/memories'
+import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedPlansRouteImport } from './routes/_authenticated/plans'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedChatIdRouteImport } from './routes/_authenticated/chat.$id'
+import { Route as AuthenticatedFollowsIdRouteImport } from './routes/_authenticated/follows.$id'
 import { Route as AuthenticatedUIdRouteImport } from './routes/_authenticated/u.$id'
+import { Route as ApiPublicJobsSendRemindersRouteImport } from './routes/api/public/jobs/send-reminders'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -48,6 +52,11 @@ const AuthenticatedMemoriesRoute = AuthenticatedMemoriesRouteImport.update({
   path: '/memories',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMessagesRoute = AuthenticatedMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedPlansRoute = AuthenticatedPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
@@ -58,11 +67,27 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedChatIdRoute = AuthenticatedChatIdRouteImport.update({
+  id: '/chat/$id',
+  path: '/chat/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFollowsIdRoute = AuthenticatedFollowsIdRouteImport.update({
+  id: '/follows/$id',
+  path: '/follows/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedUIdRoute = AuthenticatedUIdRouteImport.update({
   id: '/u/$id',
   path: '/u/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicJobsSendRemindersRoute =
+  ApiPublicJobsSendRemindersRouteImport.update({
+    id: '/api/public/jobs/send-reminders',
+    path: '/api/public/jobs/send-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -70,9 +95,13 @@ export interface FileRoutesByFullPath {
   '/friends': typeof AuthenticatedFriendsRoute
   '/home': typeof AuthenticatedHomeRoute
   '/memories': typeof AuthenticatedMemoriesRoute
+  '/messages': typeof AuthenticatedMessagesRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/chat/$id': typeof AuthenticatedChatIdRoute
+  '/follows/$id': typeof AuthenticatedFollowsIdRoute
   '/u/$id': typeof AuthenticatedUIdRoute
+  '/api/public/jobs/send-reminders': typeof ApiPublicJobsSendRemindersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -80,9 +109,13 @@ export interface FileRoutesByTo {
   '/friends': typeof AuthenticatedFriendsRoute
   '/home': typeof AuthenticatedHomeRoute
   '/memories': typeof AuthenticatedMemoriesRoute
+  '/messages': typeof AuthenticatedMessagesRoute
   '/plans': typeof AuthenticatedPlansRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/chat/$id': typeof AuthenticatedChatIdRoute
+  '/follows/$id': typeof AuthenticatedFollowsIdRoute
   '/u/$id': typeof AuthenticatedUIdRoute
+  '/api/public/jobs/send-reminders': typeof ApiPublicJobsSendRemindersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -92,9 +125,13 @@ export interface FileRoutesById {
   '/_authenticated/friends': typeof AuthenticatedFriendsRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/memories': typeof AuthenticatedMemoriesRoute
+  '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/plans': typeof AuthenticatedPlansRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/chat/$id': typeof AuthenticatedChatIdRoute
+  '/_authenticated/follows/$id': typeof AuthenticatedFollowsIdRoute
   '/_authenticated/u/$id': typeof AuthenticatedUIdRoute
+  '/api/public/jobs/send-reminders': typeof ApiPublicJobsSendRemindersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -104,9 +141,13 @@ export interface FileRouteTypes {
     | '/friends'
     | '/home'
     | '/memories'
+    | '/messages'
     | '/plans'
     | '/profile'
+    | '/chat/$id'
+    | '/follows/$id'
     | '/u/$id'
+    | '/api/public/jobs/send-reminders'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -114,9 +155,13 @@ export interface FileRouteTypes {
     | '/friends'
     | '/home'
     | '/memories'
+    | '/messages'
     | '/plans'
     | '/profile'
+    | '/chat/$id'
+    | '/follows/$id'
     | '/u/$id'
+    | '/api/public/jobs/send-reminders'
   id:
     | '__root__'
     | '/'
@@ -125,15 +170,20 @@ export interface FileRouteTypes {
     | '/_authenticated/friends'
     | '/_authenticated/home'
     | '/_authenticated/memories'
+    | '/_authenticated/messages'
     | '/_authenticated/plans'
     | '/_authenticated/profile'
+    | '/_authenticated/chat/$id'
+    | '/_authenticated/follows/$id'
     | '/_authenticated/u/$id'
+    | '/api/public/jobs/send-reminders'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicJobsSendRemindersRoute: typeof ApiPublicJobsSendRemindersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -180,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMemoriesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/messages': {
+      id: '/_authenticated/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof AuthenticatedMessagesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/plans': {
       id: '/_authenticated/plans'
       path: '/plans'
@@ -194,12 +251,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/chat/$id': {
+      id: '/_authenticated/chat/$id'
+      path: '/chat/$id'
+      fullPath: '/chat/$id'
+      preLoaderRoute: typeof AuthenticatedChatIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/follows/$id': {
+      id: '/_authenticated/follows/$id'
+      path: '/follows/$id'
+      fullPath: '/follows/$id'
+      preLoaderRoute: typeof AuthenticatedFollowsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/u/$id': {
       id: '/_authenticated/u/$id'
       path: '/u/$id'
       fullPath: '/u/$id'
       preLoaderRoute: typeof AuthenticatedUIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/jobs/send-reminders': {
+      id: '/api/public/jobs/send-reminders'
+      path: '/api/public/jobs/send-reminders'
+      fullPath: '/api/public/jobs/send-reminders'
+      preLoaderRoute: typeof ApiPublicJobsSendRemindersRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -208,8 +286,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFriendsRoute: typeof AuthenticatedFriendsRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedMemoriesRoute: typeof AuthenticatedMemoriesRoute
+  AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPlansRoute: typeof AuthenticatedPlansRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedChatIdRoute: typeof AuthenticatedChatIdRoute
+  AuthenticatedFollowsIdRoute: typeof AuthenticatedFollowsIdRoute
   AuthenticatedUIdRoute: typeof AuthenticatedUIdRoute
 }
 
@@ -217,8 +298,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFriendsRoute: AuthenticatedFriendsRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedMemoriesRoute: AuthenticatedMemoriesRoute,
+  AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPlansRoute: AuthenticatedPlansRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedChatIdRoute: AuthenticatedChatIdRoute,
+  AuthenticatedFollowsIdRoute: AuthenticatedFollowsIdRoute,
   AuthenticatedUIdRoute: AuthenticatedUIdRoute,
 }
 
@@ -229,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicJobsSendRemindersRoute: ApiPublicJobsSendRemindersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
