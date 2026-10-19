@@ -349,7 +349,7 @@ function ChatPage() {
                   </div>
                 </div>
               ) : m.kind !== "file" && uid && PROFILE_LINK.test(m.content) ? (
-                <div className={m.pending ? "opacity-70" : ""}><ContactCard id={m.content.match(PROFILE_LINK)![1]} myId={uid} /></div>
+                <div className={m.pending ? "opacity-70" : ""}><ContactCard id={m.content.match(PROFILE_LINK)![1]} myId={uid ?? ""} /></div>
               ) : emojiOnly ? (
                 <span className={`text-4xl ${m.pending ? "opacity-60" : ""}`}>{m.content}</span>
               ) : m.kind === "file" && m.attachment ? (
