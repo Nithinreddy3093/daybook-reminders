@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <ReminderWatcher />
-      <header className={`sticky top-0 z-30 border-b bg-background/90 backdrop-blur ${inChat ? "hidden md:block" : ""}`}>
+      <header className={`sticky top-0 z-30 border-b bg-background md:bg-background/90 md:backdrop-blur ${inChat ? "hidden md:block" : ""}`}>
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link to="/home" className="font-display text-2xl font-bold text-gradient-brand">
             Keep
@@ -112,7 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
       <main className={`keep-reveal mx-auto px-4 ${inChat ? "max-w-2xl pb-4 pt-3" : "max-w-5xl pb-36 pt-6 md:pb-28"}`}>{children}</main>
       {showFab && <QuickCapture />}
-      <nav className={`fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur md:hidden ${inChat ? "hidden" : ""}`}>
+      <nav className={`fixed inset-x-0 bottom-0 z-30 border-t bg-background md:hidden ${inChat ? "hidden" : ""}`}>
         <div className="mx-auto flex h-16 max-w-md items-center justify-around">
           {nav.map((n) => (
             <Link

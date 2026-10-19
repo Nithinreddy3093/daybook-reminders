@@ -35,12 +35,13 @@ const profileQuery = {
   queryFn: async () => {
     const { data: u } = await supabase.auth.getUser();
     const id = u.user!.id;
-    const [{ data }, { count: followers }, { count: following }] = await Promise.all([
+    // Counts come from the same source as the followers/following lists so they always match.
+    const [{ data }, counts] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", id),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", id),
+      supabase.rpc("public_profile", { _id: id }),
     ]);
-    return { id, email: u.user!.email ?? "", display_name: data?.display_name ?? "", bio: data?.bio ?? "", username: data?.username ?? "", followers: followers ?? 0, following: following ?? 0 };
+    const c = counts.data?.[0];
+    return { id, email: u.user!.email ?? "", display_name: data?.display_name ?? "", bio: data?.bio ?? "", username: data?.username ?? "", followers: Number(c?.followers ?? 0), following: Number(c?.following ?? 0) };
   },
 };
 
