@@ -293,7 +293,7 @@ function ChatPage() {
               ) : emojiOnly ? (
                 <span className={`text-4xl ${m.pending ? "opacity-60" : ""}`}>{m.content}</span>
               ) : m.kind === "file" && m.attachment ? (
-                <AttachmentBubble a={m.attachment} mine={mine} caption={/^(📷 Photo|🎬 Video|📎 )/u.test(m.content) ? "" : m.content} />
+                <AttachmentBubble a={m.attachment} mine={mine} caption={/^(📷 Photo|🎬 Video|🎤 Voice note|📎 )/u.test(m.content) ? "" : m.content} />
               ) : (
                 <div onDoubleClick={() => !mine && like(m.id)} className={`relative max-w-[78%] select-text whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
                   {m.content}
