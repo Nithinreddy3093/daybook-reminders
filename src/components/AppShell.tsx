@@ -2,12 +2,13 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
-import { Home, ListChecks, Image as ImageIcon, User, Bell, Plus, X, Search } from "lucide-react";
+import { Home, ListChecks, Image as ImageIcon, User, Bell, Plus, X, Search, Send } from "lucide-react";
 import { toggleTask } from "@/lib/tasks";
 import { applyTheme, readTheme } from "@/lib/theme";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery } from "@/lib/data";
+import { unreadCount } from "@/lib/messages";
 
 const nav = [
   { to: "/home", label: "Home", icon: Home },
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link to="/friends" aria-label="Find friends" className="rounded-full p-2 hover:bg-muted">
               <Search className="h-5 w-5" />
             </Link>
+            <InboxLink />
             <button onClick={askNotify} aria-label="Enable notifications" className="rounded-full p-2 hover:bg-muted">
               <Bell className="h-5 w-5" />
             </button>
@@ -118,6 +120,23 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
     </div>
+  );
+}
+
+function InboxLink() {
+  const qc = useQueryClient();
+  const { data: n = 0 } = useQuery({ queryKey: ["unread"], queryFn: unreadCount, refetchInterval: 60000 });
+  useEffect(() => {
+    const ch = supabase.channel("unread-badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => qc.invalidateQueries({ queryKey: ["unread"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
+  return (
+    <Link to="/messages" aria-label="Messages" className="relative rounded-full p-2 hover:bg-muted">
+      <Send className="h-5 w-5" />
+      {n > 0 && <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gradient-brand px-1 text-[10px] font-bold text-primary-foreground">{n > 9 ? "9+" : n}</span>}
+    </Link>
   );
 }
 
