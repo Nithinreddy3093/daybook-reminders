@@ -9,10 +9,11 @@ export async function getInbox() {
   const uid = await me();
   const { data, error } = await supabase.from("messages").select("*").order("created_at", { ascending: false }).limit(500);
   if (error) throw error;
-  const latest = new Map<string, { last: Message; unread: number }>();
+  const latest = new Map<string, { last: Message; unread: number; pendingPlans: number }>();
   for (const m of (data ?? []) as Message[]) {
     const other = m.sender_id === uid ? m.recipient_id : m.sender_id;
-    const e = latest.get(other) ?? { last: m, unread: 0 };
+    const e = latest.get(other) ?? { last: m, unread: 0, pendingPlans: 0 };
+    if (m.recipient_id === uid && m.kind === "plan" && m.plan_status === "pending") e.pendingPlans++;
     if (m.recipient_id === uid && !m.read_at) e.unread++;
     latest.set(other, e);
   }
@@ -51,7 +52,7 @@ export async function markRead(from: string) {
   await supabase.from("messages").update({ read_at: new Date().toISOString() }).eq("sender_id", from).eq("recipient_id", uid).is("read_at", null);
 }
 
-export async function sendPlan(to: string, plan: { title: string; due_at: string | null; remind_at: string | null }) {
+export async function sendPlan(to: string, plan: { title: string; due_at: string | null; remind_at: string | null; notes?: string | null }) {
   const title = plan.title.trim().slice(0, 200);
   if (!title) return;
   const { error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `📅 ${title}`, kind: "plan", plan });

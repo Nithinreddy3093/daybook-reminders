@@ -50,6 +50,7 @@ function InboxPage() {
                     {t.last.sender_id === data.uid ? "You: " : ""}{t.last.content}
                   </p>
                 </div>
+                {t.pendingPlans > 0 && <span className="rounded-full border border-primary px-2 py-0.5 text-xs font-semibold text-primary">📅 Plan request</span>}
                 {t.unread > 0 && <span className="rounded-full bg-gradient-brand px-2 py-0.5 text-xs font-bold text-primary-foreground">{t.unread}</span>}
               </Link>
             ))}
