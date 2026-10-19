@@ -157,7 +157,8 @@
   100% { transform: scale(1); }
 }
 @keyframes keep-splash-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-@keyframes keep-splash-out { to { opacity: 0; visibility: hidden; transform: scale(1.04); } }
+@keyframes keep-splash-out { to { opacity: 0; visibility: hidden; transform: scale(1.04); pointer-events: none; } }
+@media (display-mode: standalone) { .keep-reveal { animation: none; } }
 @media (prefers-reduced-motion: reduce) {
   #keep-splash { animation-duration: 0.2s; animation-delay: 0.3s; }
   .keep-splash-logo, .keep-splash-word { animation: none; opacity: 1; }

@@ -197,7 +197,7 @@ function ProfilePage() {
       {shareOpen && profile && <ShareSheet myId={profile.id} name={profile.display_name || "Me"} onClose={() => setShareOpen(false)} />}
       <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; }} />
       {photoMenu && createPortal(
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
           <div className="keep-bubble-in w-full max-w-sm space-y-3 rounded-t-3xl bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] text-center md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto w-fit">{avatarEl(64)}</div>
             <p className="font-display font-semibold">Profile photo</p>
