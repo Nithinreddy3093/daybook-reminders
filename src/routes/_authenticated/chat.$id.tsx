@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2, Paperclip, FileText, Download } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { createCollabPlan, type CollabPlan } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
+import { fileUrl, sendFile, getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 import { playSound } from "@/lib/sounds";
@@ -63,6 +63,47 @@ function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, qc]);
 
+  // Presence (online dot) + typing broadcast, scoped to this pair.
+  const [online, setOnline] = useState(false);
+  const [typing, setTyping] = useState(false);
+  const room = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastTyped = useRef(0);
+  useEffect(() => {
+    if (!uid) return;
+    let clear: ReturnType<typeof setTimeout> | undefined;
+    const ch = supabase.channel(`room-${[uid, id].sort().join("-")}`, { config: { presence: { key: uid } } });
+    ch.on("presence", { event: "sync" }, () => setOnline(Object.keys(ch.presenceState()).includes(id)))
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload?.from !== id) return;
+        setTyping(!!payload.on);
+        clearTimeout(clear);
+        if (payload.on) clear = setTimeout(() => setTyping(false), 3000);
+      })
+      .subscribe((st) => { if (st === "SUBSCRIBED") ch.track({ at: Date.now() }); });
+    room.current = ch;
+    return () => { clearTimeout(clear); room.current = null; supabase.removeChannel(ch); };
+  }, [uid, id]);
+  const ping = (on: boolean) => {
+    if (on && Date.now() - lastTyped.current < 1500) return;
+    lastTyped.current = on ? Date.now() : 0;
+    room.current?.send({ type: "broadcast", event: "typing", payload: { from: uid, on } });
+  };
+  useEffect(() => { if (typing) scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" }); }, [typing]);
+
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(0);
+  const pickFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    for (const f of Array.from(files)) {
+      if (f.size > 50 * 1024 * 1024) { toast.error(`${f.name} is over 50 MB`); continue; }
+      setUploading((n) => n + 1);
+      try { await sendFile(id, f); playSound("sent"); }
+      catch { toast.error(`Could not send ${f.name}`); }
+      finally { setUploading((n) => n - 1); }
+    }
+    if (fileInput.current) fileInput.current.value = "";
+  };
+
   // Mark as seen ONLY when this person is actually looking at the chat.
   const markIfLooking = useCallback(() => {
     const list = qc.getQueryData<Thread>(key)?.messages ?? [];
@@ -95,6 +136,7 @@ function ChatPage() {
     };
     qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: [...old.messages, temp] } : old);
     setText("");
+    ping(false);
     playSound("sent");
     input.current?.focus();
     try { await sendMessage(id, content); }
@@ -148,11 +190,12 @@ function ChatPage() {
       <div className="flex items-center gap-3 border-b px-4 pb-3">
         <Link to="/messages" aria-label="Back" className="rounded-full p-1.5 transition hover:bg-muted active:scale-90"><ArrowLeft className="h-5 w-5" /></Link>
         {p && <Link to="/u/$id" params={{ id }} className="flex min-w-0 items-center gap-3">
-          <Avatar p={p} size={40} />
+          <span className="relative"><Avatar p={p} size={40} />{online && <span aria-label="Online" className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-[hsl(142_70%_45%)]" />}</span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{p.display_name || p.username || "Keep user"}</p>
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              {p.username && <span>@{p.username}</span>}
+              {typing ? <span className="font-medium text-primary">typing…</span> : online ? <span className="font-medium text-[hsl(142_70%_40%)]">Active now</span> : null}
+              {!typing && !online && p.username && <span>@{p.username}</span>}
               {liveStreak(p) > 0 && <span className="flex items-center gap-0.5"><Flame className="h-3 w-3 text-primary" />{liveStreak(p)}</span>}
             </p>
           </div>
@@ -197,6 +240,8 @@ function ChatPage() {
                 </div>
               ) : emojiOnly ? (
                 <span className={`text-4xl ${m.pending ? "opacity-60" : ""}`}>{m.content}</span>
+              ) : m.kind === "file" && m.attachment ? (
+                <AttachmentBubble a={m.attachment} mine={mine} caption={/^(📷 Photo|🎬 Video|📎 )/u.test(m.content) ? "" : m.content} />
               ) : (
                 <div className={`max-w-[78%] whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
                   {m.content}
@@ -205,7 +250,9 @@ function ChatPage() {
             </div>
           );
         })}
-        {lastMine && (
+        {uploading > 0 && <div className="mt-2 flex justify-end"><div className="flex items-center gap-2 rounded-3xl bg-muted px-4 py-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Sending {uploading > 1 ? `${uploading} files` : "file"}…</div></div>}
+        {typing && <div className="keep-bubble-in mt-3 flex"><div className="flex gap-1 rounded-3xl bg-muted px-4 py-3">{[0, 1, 2].map((i) => <span key={i} className="h-2 w-2 animate-bounce rounded-full bg-muted-foreground/60" style={{ animationDelay: `${i * 150}ms` }} />)}</div></div>}
+        {lastMine && !typing && (
           <p className="mt-1 text-right text-[11px] text-muted-foreground">
             {"pending" in last && last.pending ? "Sending…" : last.read_at ? "Seen" : "Delivered"}
           </p>
@@ -258,16 +305,49 @@ function ChatPage() {
             ))}
           </div>
         )}
-        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex items-end gap-2 rounded-3xl border bg-background px-4 py-1.5">
+        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex items-end gap-2 rounded-3xl border bg-background px-2 py-1.5">
+          <input ref={fileInput} type="file" multiple hidden accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" onChange={(e) => pickFiles(e.target.files)} />
+          <button type="button" onClick={() => fileInput.current?.click()} aria-label="Attach photo, video or file" className="rounded-full p-1.5 text-muted-foreground transition hover:text-foreground active:scale-90"><Paperclip className="h-5 w-5" /></button>
           <textarea ref={input} value={text} rows={1} maxLength={2000} placeholder="Message…"
-            onChange={(e) => { setText(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}
+            onChange={(e) => { setText(e.target.value); ping(!!e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
+            onBlur={() => ping(false)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}
             className="max-h-[120px] flex-1 resize-none bg-transparent py-1.5 text-[15px] outline-none" />
           <button type="submit" disabled={!text.trim()} aria-label="Send" className="rounded-full p-1.5 text-primary transition active:scale-90 disabled:opacity-40">
             <Send className="h-5 w-5" />
           </button>
         </form>
       </div>
+    </div>
+  );
+}
+
+function AttachmentBubble({ a, mine, caption }: { a: NonNullable<Message["attachment"]>; mine: boolean; caption: string }) {
+  const url = useQuery({ queryKey: ["chat-file", a.path], queryFn: () => fileUrl(a.path), staleTime: 45 * 60 * 1000 });
+  const [big, setBig] = useState(false);
+  const img = a.type.startsWith("image/");
+  const vid = a.type.startsWith("video/");
+  const size = a.size > 1048576 ? `${(a.size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(a.size / 1024))} KB`;
+  return (
+    <div className="max-w-[78%] space-y-1">
+      {img || vid ? (
+        <div className="overflow-hidden rounded-3xl bg-muted">
+          {!url.data ? <div className="h-48 w-56 animate-pulse" />
+            : img ? <button type="button" onClick={() => setBig(true)}><img src={url.data} alt={a.name} loading="lazy" className="max-h-72 w-auto max-w-full object-cover" /></button>
+            : <video src={url.data} controls playsInline preload="metadata" className="max-h-72 max-w-full" />}
+        </div>
+      ) : (
+        <a href={url.data} target="_blank" rel="noreferrer" download={a.name} className={`flex items-center gap-3 rounded-3xl px-4 py-3 ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"}`}>
+          <FileText className="h-7 w-7 shrink-0" />
+          <span className="min-w-0"><span className="block truncate text-sm font-semibold">{a.name}</span><span className="text-xs opacity-80">{size}</span></span>
+          <Download className="h-4 w-4 shrink-0" />
+        </a>
+      )}
+      {caption && <p className={`px-2 text-sm ${mine ? "text-right" : ""}`}>{caption}</p>}
+      {big && url.data && (
+        <button type="button" onClick={() => setBig(false)} aria-label="Close photo" className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-4">
+          <img src={url.data} alt={a.name} className="max-h-full max-w-full rounded-xl" />
+        </button>
+      )}
     </div>
   );
 }
