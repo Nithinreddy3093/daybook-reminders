@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2, Paperclip, FileText, Download } from "lucide-react";
+import { ArrowLeft, Send, Flame, CalendarPlus, Check, X, Sparkles, Loader2, Paperclip, FileText, Download, Plus, Mic, ChevronDown } from "lucide-react";
+import { tap } from "@/lib/haptics";
 import { useServerFn } from "@tanstack/react-start";
 import { createCollabPlan, type CollabPlan } from "@/lib/ai.functions";
 import { toast } from "sonner";
@@ -155,7 +156,8 @@ function ChatPage() {
     setText("");
     ping(false);
     playSound("sent");
-    input.current?.focus();
+    tap();
+    if (input.current) { input.current.style.height = "auto"; input.current.focus(); }
     try { await sendMessage(id, content); }
     catch {
       qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.filter((m) => m.id !== temp.id) } : old);
@@ -198,6 +200,38 @@ function ChatPage() {
     catch { toast.error("Could not update plan"); qc.invalidateQueries({ queryKey: key }); }
   };
 
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [atBottom, setAtBottom] = useState(true);
+  const [heart, setHeart] = useState<string | null>(null);
+  const like = (mid: string) => { tap([8, 40, 8]); setHeart(mid); setTimeout(() => setHeart(null), 700); send("❤️"); };
+
+  // Voice notes
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const rec = useRef<{ mr: MediaRecorder; chunks: Blob[]; keep: boolean; timer: ReturnType<typeof setInterval> } | null>(null);
+  const startRec = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const type = ["audio/webm", "audio/mp4", "audio/ogg"].find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
+      const mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+      const r = { mr, chunks: [] as Blob[], keep: false, timer: setInterval(() => setRecSecs((s) => s + 1), 1000) };
+      mr.ondataavailable = (e) => e.data.size && r.chunks.push(e.data);
+      mr.onstop = async () => {
+        clearInterval(r.timer); stream.getTracks().forEach((t) => t.stop());
+        setRecording(false); setRecSecs(0); rec.current = null;
+        if (!r.keep || !r.chunks.length) return;
+        const mime = mr.mimeType || "audio/webm";
+        const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
+        const f = new File(r.chunks, `voice-${Date.now()}.${ext}`, { type: mime.split(";")[0] });
+        setUploading((n) => n + 1);
+        try { await sendFile(id, f); playSound("sent"); } catch { toast.error("Voice note not sent"); }
+        finally { setUploading((n) => n - 1); }
+      };
+      rec.current = r; mr.start(); tap(); setRecording(true);
+    } catch { toast.error("Microphone not available"); }
+  };
+  const stopRec = (keep: boolean) => { if (!rec.current) return; rec.current.keep = keep; tap(); rec.current.mr.stop(); };
+
   const p = prof.data?.profile;
   const last = msgs[msgs.length - 1];
   const lastMine = last && last.sender_id !== id;
@@ -219,7 +253,8 @@ function ChatPage() {
         </Link>}
       </div>
 
-      <div ref={scroller} className="flex-1 overflow-y-auto overscroll-contain px-4 py-3" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div ref={scroller} onScroll={(e) => { const el = e.currentTarget; const b = el.scrollHeight - el.scrollTop - el.clientHeight < 120; if (b !== atBottom) setAtBottom(b); }}
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 [transform:translateZ(0)]" style={{ WebkitOverflowScrolling: "touch" }}>
         {thread.isLoading && <div className="space-y-2">{[60, 40, 70].map((w, i) => <div key={i} className={`h-9 animate-pulse rounded-3xl bg-muted ${i % 2 ? "ml-auto" : ""}`} style={{ width: `${w}%` }} />)}</div>}
         {!thread.isLoading && !msgs.length && (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
@@ -260,8 +295,9 @@ function ChatPage() {
               ) : m.kind === "file" && m.attachment ? (
                 <AttachmentBubble a={m.attachment} mine={mine} caption={/^(📷 Photo|🎬 Video|📎 )/u.test(m.content) ? "" : m.content} />
               ) : (
-                <div className={`max-w-[78%] whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
+                <div onDoubleClick={() => !mine && like(m.id)} className={`relative max-w-[78%] select-text whitespace-pre-wrap break-words px-4 py-2 text-[15px] leading-snug transition-opacity ${r} ${mine ? "bg-gradient-brand text-primary-foreground" : "bg-muted"} ${m.pending ? "opacity-70" : ""}`}>
                   {m.content}
+                  {heart === m.id && <span className="keep-heart absolute -bottom-3 -right-2 text-2xl">❤️</span>}
                 </div>
               )}
             </div>
@@ -276,7 +312,11 @@ function ChatPage() {
         )}
       </div>
 
-      <div className="border-t bg-background px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <div className="relative border-t bg-background px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        {!atBottom && (
+          <button type="button" aria-label="Scroll to latest" onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })}
+            className="keep-bubble-in absolute -top-12 right-4 rounded-full border bg-background p-2 shadow-lg active:scale-90"><ChevronDown className="h-5 w-5" /></button>
+        )}
         {planOpen && (
           <div className="keep-bubble-in mb-2 space-y-2 rounded-2xl border p-3">
             <input autoFocus value={pTitle} onChange={(e) => setPTitle(e.target.value)} maxLength={200} placeholder="What should we plan?" className="w-full bg-transparent text-sm outline-none" />
@@ -313,25 +353,39 @@ function ChatPage() {
             <div className="flex justify-end"><button type="button" onClick={() => { setAiOpen(false); setDraft(null); }} className="text-xs text-muted-foreground">Close</button></div>
           </div>
         )}
-        {!text && !planOpen && !aiOpen && (
-          <div className="mb-2 flex gap-2">
-            <button type="button" onClick={() => setPlanOpen(true)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium transition active:scale-90"><CalendarPlus className="h-4 w-4" />Plan</button>
-            <button type="button" onClick={() => setAiOpen(true)} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-sm font-medium transition active:scale-90"><Sparkles className="h-4 w-4 text-primary" />AI Plan</button>
+        {menuOpen && !planOpen && !aiOpen && (
+          <div className="keep-bubble-in mb-2 flex flex-wrap gap-2">
+            <button type="button" onClick={() => { tap(); setMenuOpen(false); fileInput.current?.click(); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><Paperclip className="h-4 w-4" />Photo / file</button>
+            <button type="button" onClick={() => { tap(); setMenuOpen(false); setPlanOpen(true); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><CalendarPlus className="h-4 w-4" />Plan</button>
+            <button type="button" onClick={() => { tap(); setMenuOpen(false); setAiOpen(true); }} className="flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium active:scale-90"><Sparkles className="h-4 w-4 text-primary" />AI Plan</button>
             {QUICK.map((e) => (
-              <button key={e} type="button" onClick={() => send(e)} className="rounded-full bg-muted px-3 py-1 text-lg transition active:scale-90">{e}</button>
+              <button key={e} type="button" onClick={() => { setMenuOpen(false); send(e); }} className="rounded-full bg-muted px-3 py-1 text-lg active:scale-90">{e}</button>
             ))}
           </div>
         )}
-        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex items-end gap-2 rounded-3xl border bg-background px-2 py-1.5">
-          <input ref={fileInput} type="file" multiple hidden accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" onChange={(e) => pickFiles(e.target.files)} />
-          <button type="button" onClick={() => fileInput.current?.click()} aria-label="Attach photo, video or file" className="rounded-full p-1.5 text-muted-foreground transition hover:text-foreground active:scale-90"><Paperclip className="h-5 w-5" /></button>
-          <textarea ref={input} value={text} rows={1} maxLength={2000} placeholder="Message…"
-            onChange={(e) => { setText(e.target.value); ping(!!e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
-            onBlur={() => ping(false)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}
-            className="max-h-[120px] flex-1 resize-none bg-transparent py-1.5 text-[15px] outline-none" />
-          <button type="submit" disabled={!text.trim()} aria-label="Send" className="rounded-full p-1.5 text-primary transition active:scale-90 disabled:opacity-40">
-            <Send className="h-5 w-5" />
-          </button>
+        <form onSubmit={(e) => { e.preventDefault(); send(text); }} className="flex items-end gap-1.5 rounded-3xl border bg-background px-1.5 py-1.5">
+          <input ref={fileInput} type="file" multiple hidden accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" onChange={(e) => pickFiles(e.target.files)} />
+          <button type="button" onClick={() => { tap(); setMenuOpen((o) => !o); }} aria-label="More options" className={`rounded-full p-1.5 text-primary-foreground bg-gradient-brand transition-transform active:scale-90 ${menuOpen ? "rotate-45" : ""}`}><Plus className="h-5 w-5" /></button>
+          {recording ? (
+            <div className="flex flex-1 items-center gap-2 py-1.5 text-sm">
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" />
+              <span className="font-medium tabular-nums">{Math.floor(recSecs / 60)}:{String(recSecs % 60).padStart(2, "0")}</span>
+              <button type="button" onClick={() => stopRec(false)} className="ml-auto rounded-full px-2 text-xs text-muted-foreground">Cancel</button>
+            </div>
+          ) : (
+            <textarea ref={input} value={text} rows={1} maxLength={2000} placeholder="Message…" enterKeyHint="send"
+              onFocus={() => setMenuOpen(false)}
+              onChange={(e) => { setText(e.target.value); ping(!!e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
+              onBlur={() => ping(false)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(text); } }}
+              className="max-h-[120px] flex-1 resize-none bg-transparent px-1 py-1.5 text-[15px] outline-none" />
+          )}
+          {recording ? (
+            <button type="button" onClick={() => stopRec(true)} aria-label="Send voice note" className="rounded-full p-1.5 text-primary active:scale-90"><Send className="h-5 w-5" /></button>
+          ) : text.trim() ? (
+            <button type="submit" aria-label="Send" className="keep-bubble-in rounded-full p-1.5 text-primary active:scale-90"><Send className="h-5 w-5" /></button>
+          ) : (
+            <button type="button" onClick={startRec} aria-label="Record voice note" className="rounded-full p-1.5 text-muted-foreground transition hover:text-foreground active:scale-90"><Mic className="h-5 w-5" /></button>
+          )}
         </form>
       </div>
     </div>
@@ -343,10 +397,15 @@ function AttachmentBubble({ a, mine, caption }: { a: NonNullable<Message["attach
   const [big, setBig] = useState(false);
   const img = a.type.startsWith("image/");
   const vid = a.type.startsWith("video/");
+  const aud = a.type.startsWith("audio/");
   const size = a.size > 1048576 ? `${(a.size / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(a.size / 1024))} KB`;
   return (
     <div className="max-w-[78%] space-y-1">
-      {img || vid ? (
+      {aud ? (
+        <div className={`rounded-3xl px-2 py-1.5 ${mine ? "bg-gradient-brand" : "bg-muted"}`}>
+          {url.data ? <audio src={url.data} controls preload="metadata" className="h-10 w-60 max-w-full" /> : <div className="h-10 w-60 animate-pulse" />}
+        </div>
+      ) : img || vid ? (
         <div className="overflow-hidden rounded-3xl bg-muted">
           {!url.data ? <div className="h-48 w-56 animate-pulse" />
             : img ? <button type="button" onClick={() => setBig(true)}><img src={url.data} alt={a.name} loading="lazy" className="max-h-72 w-auto max-w-full object-cover" /></button>
