@@ -75,7 +75,7 @@ function ChatPage() {
     html.style.overflow = "hidden"; body.style.overflow = "hidden"; body.style.overscrollBehavior = "none";
     return () => {
       vv.removeEventListener("resize", on); vv.removeEventListener("scroll", on);
-      [html.style.overflow, body.style.overflow, body.style.overscrollBehavior] = prev;
+      html.style.overflow = prev[0] ?? ""; body.style.overflow = prev[1] ?? ""; body.style.overscrollBehavior = prev[2] ?? "";
     };
   }, []);
 
