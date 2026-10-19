@@ -50,6 +50,13 @@
       "when": 1792395081798,
       "tag": "0006_tighten_social_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792396931756,
+      "tag": "0007_avatars_shares_plans",
+      "breakpoints": true
     }
   ]
 }

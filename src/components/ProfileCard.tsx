@@ -1,13 +1,19 @@
 import { Link } from "@tanstack/react-router";
 import { Flame } from "lucide-react";
 import { activeToday, initials, liveStreak, type PublicProfile } from "@/lib/social";
+import { useAvatar } from "@/lib/avatars";
 
 export function Avatar({ p, size = 56 }: { p: PublicProfile; size?: number }) {
+  const src = useAvatar(p.id);
   return (
     <div className={activeToday(p) ? "ring-gradient shrink-0" : "shrink-0 rounded-full border p-[3px]"}>
-      <div style={{ width: size, height: size }} className="flex items-center justify-center rounded-full bg-background font-display font-bold">
-        {initials(p)}
-      </div>
+      {src ? (
+        <img src={src} alt="" width={size} height={size} style={{ width: size, height: size }} className="rounded-full bg-muted object-cover" />
+      ) : (
+        <div style={{ width: size, height: size, fontSize: size / 2.8 }} className="flex items-center justify-center rounded-full bg-background font-display font-bold">
+          {initials(p)}
+        </div>
+      )}
     </div>
   );
 }

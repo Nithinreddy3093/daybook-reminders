@@ -73,6 +73,9 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          kind: string
+          plan: Json | null
+          plan_status: string | null
           read_at: string | null
           recipient_id: string
           sender_id: string
@@ -81,6 +84,9 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          kind?: string
+          plan?: Json | null
+          plan_status?: string | null
           read_at?: string | null
           recipient_id: string
           sender_id?: string
@@ -89,6 +95,9 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          kind?: string
+          plan?: Json | null
+          plan_status?: string | null
           read_at?: string | null
           recipient_id?: string
           sender_id?: string
@@ -97,6 +106,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar: string | null
           bio: string | null
           display_name: string | null
           id: string
@@ -106,6 +116,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          avatar?: string | null
           bio?: string | null
           display_name?: string | null
           id: string
@@ -115,6 +126,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          avatar?: string | null
           bio?: string | null
           display_name?: string | null
           id?: string
@@ -149,6 +161,27 @@ export type Database = {
           id?: string
           p256dh?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      task_shares: {
+        Row: {
+          created_at: string
+          owner_id: string
+          status: string
+          viewer_id: string
+        }
+        Insert: {
+          created_at?: string
+          owner_id: string
+          status?: string
+          viewer_id: string
+        }
+        Update: {
+          created_at?: string
+          owner_id?: string
+          status?: string
+          viewer_id?: string
         }
         Relationships: []
       }
@@ -213,6 +246,13 @@ export type Database = {
           username: string
         }[]
       }
+      get_avatars: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar: string
+          id: string
+        }[]
+      }
       is_connected: { Args: { _other: string }; Returns: boolean }
       public_profile: {
         Args: { _id: string }
@@ -226,6 +266,10 @@ export type Database = {
           streak: number
           username: string
         }[]
+      }
+      respond_plan: {
+        Args: { _accept: boolean; _msg: string }
+        Returns: string
       }
       search_profiles: {
         Args: { _q: string }

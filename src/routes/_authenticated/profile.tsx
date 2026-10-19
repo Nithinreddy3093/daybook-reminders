@@ -1,7 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Bell, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
+import { Bell, Camera, Download, LogOut, Moon, Sun, Smartphone } from "lucide-react";
+import { photoToAvatar, useAvatar } from "@/lib/avatars";
+import { approve, myShares, removeShare } from "@/lib/shares";
+import { ProfileRow } from "@/components/ProfileCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { tasksQuery, memoriesQuery } from "@/lib/data";
@@ -56,6 +59,8 @@ function ProfilePage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [sound, setSound] = useState(true);
   const { data: myStreak = 0 } = useQuery({ queryKey: ["my-streak"], queryFn: getMyStreak });
+  const avatar = useAvatar(profile?.id);
+  const { data: shares = [] } = useQuery({ queryKey: ["my-shares"], queryFn: myShares });
 
   useEffect(() => {
     setTheme(readTheme());
@@ -117,6 +122,25 @@ function ProfilePage() {
     finally { setExporting(false); }
   };
 
+  const changePhoto = async (f: File) => {
+    if (!profile) return;
+    try {
+      const url = await photoToAvatar(f);
+      const { error } = await supabase.from("profiles").upsert({ id: profile.id, avatar: url, updated_at: new Date().toISOString() });
+      if (error) throw error;
+      qc.setQueryData(["avatar", profile.id], url);
+      toast("Photo updated");
+    } catch { toast.error("Could not use that photo"); }
+  };
+  const removePhoto = async () => {
+    if (!profile) return;
+    await supabase.from("profiles").update({ avatar: null }).eq("id", profile.id);
+    qc.setQueryData(["avatar", profile.id], null);
+  };
+  const shareAct = async (fn: () => Promise<void>) => {
+    try { await fn(); qc.invalidateQueries({ queryKey: ["my-shares"] }); } catch { toast.error("Something went wrong"); }
+  };
+
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
@@ -127,9 +151,12 @@ function ProfilePage() {
   return (
     <div className="space-y-8">
       <section className="flex items-center gap-5">
-        <div className="ring-gradient shrink-0">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background font-display text-2xl font-bold">{initials}</div>
-        </div>
+        <label className="ring-gradient relative shrink-0 cursor-pointer" title="Change photo">
+          {avatar ? <img src={avatar} alt="" className="h-20 w-20 rounded-full object-cover" />
+            : <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background font-display text-2xl font-bold">{initials}</div>}
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground"><Camera className="h-3 w-3" /></span>
+          <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) changePhoto(f); e.target.value = ""; }} />
+        </label>
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-bold">{name || "Your profile"}</h1>
           <p className="truncate text-sm text-muted-foreground">{profile?.email}</p>
@@ -154,6 +181,24 @@ function ProfilePage() {
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short bio" maxLength={200} rows={2}
           className="w-full rounded-xl border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
         <button onClick={save} className="rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">Save</button>
+      </section>
+
+      {avatar && <button onClick={removePhoto} className="-mt-6 text-xs text-muted-foreground underline">Remove photo</button>}
+
+      <section className="space-y-2 rounded-2xl border p-5">
+        <h2 className="font-semibold">Who can see your plans</h2>
+        <p className="text-xs text-muted-foreground">Only people you accept can see your plans. Memories always stay private.</p>
+        {!shares.length && <p className="text-sm text-muted-foreground">Nobody yet.</p>}
+        {shares.map((s) => s.profile && (
+          <ProfileRow key={s.viewer_id} p={s.profile} action={s.status === "pending" ? (
+            <div className="flex gap-1">
+              <button onClick={() => shareAct(() => approve(s.viewer_id))} className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Accept</button>
+              <button onClick={() => shareAct(() => removeShare(s.owner_id, s.viewer_id))} className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">Decline</button>
+            </div>
+          ) : (
+            <button onClick={() => shareAct(() => removeShare(s.owner_id, s.viewer_id))} className="rounded-full bg-muted px-3 py-1 text-xs font-semibold">Remove</button>
+          )} />
+        ))}
       </section>
 
       <section>
