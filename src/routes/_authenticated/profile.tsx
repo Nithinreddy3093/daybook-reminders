@@ -14,6 +14,7 @@ import { buildExport, downloadFile } from "@/lib/export";
 import { currentSubscription, disablePush, enablePush, pushSupported } from "@/lib/push";
 import { sendTestPush } from "@/lib/push.functions";
 import { getMyStreak } from "@/lib/social";
+import { ShareSheet } from "@/components/ShareSheet";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -111,14 +112,8 @@ function ProfilePage() {
     toast("Profile saved");
     return true;
   };
-  const shareProfile = async () => {
-    if (!profile) return;
-    const url = `${window.location.origin}/u/${profile.id}`;
-    try {
-      if (navigator.share) await navigator.share({ title: "My Keep profile", url });
-      else { await navigator.clipboard.writeText(url); toast("Profile link copied"); }
-    } catch { /* cancelled */ }
-  };
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareProfile = () => { if (profile) setShareOpen(true); };
 
   const pickTheme = (t: Theme) => { applyTheme(t); setTheme(t); };
 
