@@ -5,17 +5,23 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("push", (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch { d = { body: event.data && event.data.text() }; }
-  event.waitUntil(
-    self.registration.showNotification(d.title || "Keep", {
+  event.waitUntil((async () => {
+    // If Keep is open, let the page play its own chime too.
+    const list = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    list.forEach((c) => c.postMessage({ type: "keep-push", sound: d.sound || "reminder" }));
+    await self.registration.showNotification(d.title || "Keep", {
       body: d.body || "",
       icon: "/icon-512.png",
       badge: "/icon-512.png",
       tag: d.tag || "keep",
       renotify: true,
-      vibrate: [200, 100, 200],
+      silent: false,
+      requireInteraction: true,
+      sound: "/sounds/chime.wav",
+      vibrate: [250, 100, 250, 100, 400],
       data: { url: d.url || "/home" },
-    }),
-  );
+    });
+  })());
 });
 
 self.addEventListener("notificationclick", (event) => {
