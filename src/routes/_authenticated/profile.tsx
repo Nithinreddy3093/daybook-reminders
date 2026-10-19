@@ -191,6 +191,7 @@ function ProfilePage() {
         </div>
       </section>
 
+      {shareOpen && profile && <ShareSheet myId={profile.id} name={profile.display_name || "Me"} onClose={() => setShareOpen(false)} />}
       {photoMenu && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 md:items-center" onClick={() => setPhotoMenu(false)}>
           <div className="w-full max-w-sm space-y-4 rounded-t-3xl bg-background p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-center md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
