@@ -61,7 +61,7 @@ export async function getFollowList(id: string, tab: "followers" | "following"):
   const col = tab === "followers" ? "following_id" : "follower_id";
   const other = tab === "followers" ? "follower_id" : "following_id";
   const { data } = await supabase.from("follows").select(other).eq(col, id).limit(500);
-  const ids = (data ?? []).map((r) => (r as Record<string, string>)[other]);
+  const ids = (data ?? []).map((r) => (r as Record<string, string>)[other]).filter((x): x is string => !!x);
   if (!ids.length) return [];
   const { data: ps } = await supabase.from("profiles").select(COLS).in("id", ids);
   return (ps ?? []) as PublicProfile[];

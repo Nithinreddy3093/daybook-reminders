@@ -77,7 +77,7 @@ function ChatPage() {
             </div>
           );
         })}
-        {msgs.length > 0 && msgs[msgs.length - 1].sender_id !== id && msgs[msgs.length - 1].read_at && (
+        {msgs.length > 0 && msgs[msgs.length - 1]?.sender_id !== id && msgs[msgs.length - 1]?.read_at && (
           <p className="text-right text-[11px] text-muted-foreground">Seen</p>
         )}
         <div ref={end} />
