@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PublicProfile } from "@/lib/social";
 
-export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string; kind?: string; plan?: { title: string; due_at?: string | null; remind_at?: string | null; notes?: string | null } | null; plan_status?: string | null };
+export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string; kind?: string; plan?: { title: string; due_at?: string | null; remind_at?: string | null; notes?: string | null } | null; plan_status?: string | null; attachment?: Attachment | null };
+export type Attachment = { path: string; name: string; type: string; size: number };
 
 async function me() { const { data } = await supabase.auth.getUser(); return data.user!.id; }
 
@@ -62,4 +63,27 @@ export async function sendPlan(to: string, plan: { title: string; due_at: string
 export async function respondPlan(id: string, accept: boolean) {
   const { error } = await supabase.rpc("respond_plan", { _msg: id, _accept: accept });
   if (error) throw error;
+}
+
+export async function sendFile(to: string, file: File, caption = "") {
+  if (file.size > 50 * 1024 * 1024) throw new Error("Max 50 MB");
+  const uid = await me();
+  const safe = file.name.replace(/[^\w.\-]+/g, "_").slice(-80);
+  const path = `${uid}/${to}/${crypto.randomUUID()}-${safe}`;
+  const up = await supabase.storage.from("chat-files").upload(path, file, { contentType: file.type || "application/octet-stream" });
+  if (up.error) throw up.error;
+  const icon = file.type.startsWith("image/") ? "📷 Photo" : file.type.startsWith("video/") ? "🎬 Video" : `📎 ${file.name}`;
+  const attachment: Attachment = { path, name: file.name, type: file.type, size: file.size };
+  const { error } = await supabase.from("messages").insert({ sender_id: uid, recipient_id: to, content: (caption.trim() || icon).slice(0, 2000), kind: "file", attachment });
+  if (error) throw error;
+}
+
+const urlCache = new Map<string, { url: string; exp: number }>();
+export async function fileUrl(path: string) {
+  const c = urlCache.get(path);
+  if (c && c.exp > Date.now()) return c.url;
+  const { data, error } = await supabase.storage.from("chat-files").createSignedUrl(path, 3600);
+  if (error) throw error;
+  urlCache.set(path, { url: data.signedUrl, exp: Date.now() + 50 * 60 * 1000 });
+  return data.signedUrl;
 }
