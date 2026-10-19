@@ -222,7 +222,7 @@ function ChatPage() {
         if (!r.keep || !r.chunks.length) return;
         const mime = mr.mimeType || "audio/webm";
         const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
-        const f = new File(r.chunks, `voice-${Date.now()}.${ext}`, { type: mime.split(";")[0] });
+        const f = new File(r.chunks, `voice-${Date.now()}.${ext}`, { type: mime.split(";")[0] || "audio/webm" });
         setUploading((n) => n + 1);
         try { await sendFile(id, f); playSound("sent"); } catch { toast.error("Voice note not sent"); }
         finally { setUploading((n) => n - 1); }
