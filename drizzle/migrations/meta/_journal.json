@@ -85,6 +85,13 @@
       "when": 1792409367551,
       "tag": "0011_chat_checklists",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792410165458,
+      "tag": "0012_friend_requests",
+      "breakpoints": true
     }
   ]
 }
