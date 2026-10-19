@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useScrollLock } from "@/lib/use-sheet";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Send, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -8,6 +10,7 @@ import { tap } from "@/lib/haptics";
 
 export function ShareSheet({ myId, name, onClose }: { myId: string; name: string; onClose: () => void }) {
   const url = `${window.location.origin}/u/${myId}`;
+  useScrollLock(true);
   const [sent, setSent] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const { data: people = [] } = useQuery({
@@ -34,7 +37,7 @@ export function ShareSheet({ myId, name, onClose }: { myId: string; name: string
     else copy();
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 md:items-center" onClick={onClose}>
       <div className="keep-bubble-in flex max-h-[80vh] w-full max-w-md flex-col rounded-t-3xl bg-background pb-[calc(1rem+env(safe-area-inset-bottom))] md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted" />
@@ -56,6 +59,7 @@ export function ShareSheet({ myId, name, onClose }: { myId: string; name: string
           <button onClick={native} className="flex flex-col items-center gap-1 rounded-xl py-2 text-xs active:scale-95"><span className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">{typeof navigator !== "undefined" && "share" in navigator ? <Share2 className="h-5 w-5" /> : <Send className="h-5 w-5" />}</span>Share to apps</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
