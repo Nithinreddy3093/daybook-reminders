@@ -177,7 +177,7 @@ function QuickCapture() {
               <p className="font-display text-lg font-bold">Quick capture</p>
               <button onClick={() => setOpen(false)} aria-label="Close" className="rounded-full p-1.5 hover:bg-muted"><X className="h-5 w-5" /></button>
             </div>
-            <QuickAdd autoFocus onDone={() => setOpen(false)} />
+            <QuickAdd autoFocus={typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches} onDone={() => setOpen(false)} />
             <button onClick={() => { setOpen(false); navigate({ to: "/memories" }); }}
               className="w-full rounded-full border py-2 text-sm font-medium hover:bg-muted">Save a photo, file or note instead</button>
           </div>
