@@ -26,6 +26,21 @@ export const Route = createFileRoute("/_authenticated/chat/$id")({
 type Thread = { uid: string; messages: (Message & { pending?: boolean })[] };
 const QUICK = ["❤️", "😂", "👍", "🔥"];
 
+// Shrink large phone photos before upload so sending is fast on mobile data.
+async function shrinkImage(f: File): Promise<File> {
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(f.type) || f.size < 1.5 * 1024 * 1024) return f;
+  try {
+    const bmp = await createImageBitmap(f);
+    const scale = Math.min(1, 1920 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+    const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/jpeg", 0.82));
+    if (!blob || blob.size >= f.size) return f;
+    return new File([blob], f.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch { return f; }
+}
+
 function isLooking() {
   return document.visibilityState === "visible" && document.hasFocus();
 }
@@ -84,6 +99,7 @@ function ChatPage() {
     return () => { clearTimeout(clear); room.current = null; supabase.removeChannel(ch); };
   }, [uid, id]);
   const ping = (on: boolean) => {
+    if (localStorage.getItem("keep-typing") === "off") return;
     if (on && Date.now() - lastTyped.current < 1500) return;
     lastTyped.current = on ? Date.now() : 0;
     room.current?.send({ type: "broadcast", event: "typing", payload: { from: uid, on } });
@@ -94,14 +110,15 @@ function ChatPage() {
   const [uploading, setUploading] = useState(0);
   const pickFiles = async (files: FileList | null) => {
     if (!files?.length) return;
-    for (const f of Array.from(files)) {
-      if (f.size > 50 * 1024 * 1024) { toast.error(`${f.name} is over 50 MB`); continue; }
-      setUploading((n) => n + 1);
-      try { await sendFile(id, f); playSound("sent"); }
-      catch { toast.error(`Could not send ${f.name}`); }
-      finally { setUploading((n) => n - 1); }
-    }
+    const list = Array.from(files);
     if (fileInput.current) fileInput.current.value = "";
+    await Promise.all(list.map(async (raw) => {
+      if (raw.size > 50 * 1024 * 1024) { toast.error(`${raw.name} is over 50 MB`); return; }
+      setUploading((n) => n + 1);
+      try { const f = await shrinkImage(raw); await sendFile(id, f); playSound("sent"); }
+      catch { toast.error(`Could not send ${raw.name}`); }
+      finally { setUploading((n) => n - 1); }
+    }));
   };
 
   // Mark as seen ONLY when this person is actually looking at the chat.
