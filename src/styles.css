@@ -115,6 +115,10 @@
   * {
     border-color: var(--color-border);
   }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+  @media (max-width: 767px) {
+    input, textarea, select { font-size: 16px !important; }
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
