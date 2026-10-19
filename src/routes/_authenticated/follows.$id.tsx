@@ -8,7 +8,7 @@ import { FollowButton } from "@/components/FollowButton";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/follows/$id")({
-  validateSearch: (s: Record<string, unknown>) => ({ tab: s.tab === "following" ? ("following" as const) : ("followers" as const) }),
+  validateSearch: (s: Record<string, unknown>) => ({ tab: s["tab"] === "following" ? ("following" as const) : ("followers" as const) }),
   head: () => ({
     meta: [
       { title: "Followers — Keep" },

@@ -32,13 +32,16 @@ function UserPage() {
           <h1 className="truncate text-2xl font-bold">{p.display_name || p.username || "Keep user"}</h1>
           {p.username && <p className="text-sm text-muted-foreground">@{p.username}</p>}
           <div className="mt-2 flex gap-5 text-sm">
-            <span><b>{data.followers}</b> followers</span>
-            <span><b>{data.following}</b> following</span>
+            <Link to="/follows/$id" params={{ id: p.id }} search={{ tab: "followers" }}><b>{data.followers}</b> followers</Link>
+            <Link to="/follows/$id" params={{ id: p.id }} search={{ tab: "following" }}><b>{data.following}</b> following</Link>
           </div>
         </div>
       </section>
       {p.bio && <p className="text-sm">{p.bio}</p>}
-      <FollowButton id={p.id} />
+      <div className="flex gap-2">
+        <FollowButton id={p.id} />
+        <Link to="/chat/$id" params={{ id: p.id }} className="rounded-full border px-4 py-1.5 text-sm font-medium">Message</Link>
+      </div>
       <div className="rounded-2xl border p-6 text-center">
         <Flame className="mx-auto h-10 w-10 text-primary" />
         <p className="mt-2 font-display text-4xl font-bold text-gradient-brand">{streak}</p>

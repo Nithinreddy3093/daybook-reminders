@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { getMyStreak } from "@/lib/social";
 import { Bell, CheckCircle2, Image as ImageIcon } from "lucide-react";
 import { tasksQuery, memoriesQuery, fmtWhen } from "@/lib/data";
 import { AiSuggest } from "@/components/AiSuggest";
@@ -33,9 +34,7 @@ function HomePage() {
   const weekAgo = Date.now() - 7 * 864e5;
   const doneWeek = tasks.filter((t) => t.done && +new Date(t.created_at) > weekAgo).length;
   const momentsWeek = memories.filter((m) => +new Date(m.created_at) > weekAgo).length;
-  const dayKeys = new Set(memories.map((m) => new Date(m.created_at).toDateString()));
-  let streak = 0;
-  for (let d = new Date(); dayKeys.has(d.toDateString()); d.setDate(d.getDate() - 1)) streak++;
+  const { data: streak = 0 } = useQuery({ queryKey: ["my-streak"], queryFn: getMyStreak });
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
@@ -64,7 +63,7 @@ function HomePage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {[[doneWeek, "done this week"], [momentsWeek, "moments this week"], [streak, "day memory streak 🔥"]].map(([n, l]) => (
+        {[[doneWeek, "done this week"], [momentsWeek, "moments this week"], [streak, "day streak 🔥"]].map(([n, l]) => (
           <div key={String(l)} className="rounded-2xl bg-muted p-4">
             <p className="font-display text-2xl font-bold">{n}</p>
             <p className="text-xs text-muted-foreground">{l}</p>
