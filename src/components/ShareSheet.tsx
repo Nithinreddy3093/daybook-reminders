@@ -27,7 +27,7 @@ export function ShareSheet({ myId, name, onClose }: { myId: string; name: string
   const send = async (p: PublicProfile) => {
     tap();
     setSent((s) => new Set(s).add(p.id));
-    try { await sendMessage(p.id, `Check out my Keep profile 👋 ${url}`); }
+    try { await sendMessage(p.id, `👤 Shared a profile ${url}`); }
     catch { toast.error("Could not send"); setSent((s) => { const n = new Set(s); n.delete(p.id); return n; }); }
   };
   const copy = async () => { tap(); try { await navigator.clipboard.writeText(url); toast("Link copied"); } catch { toast.error("Could not copy"); } };
