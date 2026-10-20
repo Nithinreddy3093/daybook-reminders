@@ -51,34 +51,36 @@ export type ParsedTask = {
   recurrence: "none" | "daily" | "weekly" | "monthly";
 };
 
+const LANG = "The user may write in ANY language or mix (English, Hindi, Telugu, Tamil, Hinglish, Spanish, etc.), with typos or slang. Understand it fully. Write task titles in the same language/script the user used.";
+const TIME_RULES = "Time words: morning=09:00, afternoon=14:00, evening=18:00, night=21:00, tonight=today 21:00. 'tomorrow', weekdays, 'next week', dates like 25/10 or Oct 25 must be resolved relative to the current local time. If only a day is given, use 09:00. If no time/day is mentioned, due_at=null.";
+
 export const parseTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { text: string; now: string; tz: string }) => ({
-    text: String(input.text ?? "").slice(0, 300),
+    text: String(input.text ?? "").slice(0, 1500),
     now: String(input.now ?? ""),
     tz: String(input.tz ?? "UTC").slice(0, 60),
   }))
-  .handler(async ({ data }): Promise<{ task: ParsedTask | null; error?: string }> => {
+  .handler(async ({ data }): Promise<{ tasks: ParsedTask[]; task: ParsedTask | null; error?: string | undefined }> => {
     try {
       const text = await ask(
-        `Convert the user's sentence into a task. Current local time: ${data.now} (timezone ${data.tz}). Reply ONLY with JSON: {"title": string, "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (default 15 minutes before due_at if a time is given), "priority": "high"|"medium"|"normal", "category": one of "Personal","Work","Health","Ideas","Errands" or null, "recurrence": "none"|"daily"|"weekly"|"monthly"}.`,
+        `You turn a message into to-do tasks. ${LANG} The message may contain several tasks (split on commas, "and", "then", new lines, numbering) — return EACH as its own task; if one item is a bigger goal, add its concrete steps as separate tasks too (max 10 total). Current local time: ${data.now} (timezone ${data.tz}). ${TIME_RULES} Reply ONLY with a JSON array of {"title": short clear title, "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (15 minutes before due_at when a time exists), "priority": "high"|"medium"|"normal" (high if urgent/important words), "category": one of "Personal","Work","Health","Ideas","Errands" or null, "recurrence": "none"|"daily"|"weekly"|"monthly"}.`,
         data.text,
       );
-      const p = extractJson(text) as Partial<ParsedTask> | null;
-      if (!p?.title) return { task: null, error: "Could not understand" };
+      const raw = extractJson(text);
+      const arr = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Partial<ParsedTask>[];
       const valid = (d: unknown) => (typeof d === "string" && !isNaN(Date.parse(d)) ? new Date(d).toISOString() : null);
-      return {
-        task: {
-          title: String(p.title).slice(0, 200),
-          due_at: valid(p.due_at),
-          remind_at: valid(p.remind_at),
-          priority: p.priority === "high" || p.priority === "medium" ? p.priority : "normal",
-          category: typeof p.category === "string" ? p.category : null,
-          recurrence: ["daily", "weekly", "monthly"].includes(p.recurrence as string) ? (p.recurrence as ParsedTask["recurrence"]) : "none",
-        },
-      };
+      const tasks = arr.filter((p) => p?.title).slice(0, 10).map((p) => ({
+        title: String(p.title).slice(0, 200),
+        due_at: valid(p.due_at),
+        remind_at: valid(p.remind_at),
+        priority: p.priority === "high" || p.priority === "medium" ? p.priority : "normal",
+        category: typeof p.category === "string" ? p.category : null,
+        recurrence: ["daily", "weekly", "monthly"].includes(p.recurrence as string) ? (p.recurrence as ParsedTask["recurrence"]) : "none",
+      } satisfies ParsedTask));
+      return { tasks, task: tasks[0] ?? null, error: tasks.length ? undefined : "Could not understand" };
     } catch (e) {
-      if (e instanceof GatewayError) return { task: null, error: e.message };
+      if (e instanceof GatewayError) return { tasks: [], task: null, error: e.message };
       throw e;
     }
   });
@@ -132,14 +134,14 @@ export type CollabPlan = { title: string; due_at: string | null; remind_at: stri
 export const createCollabPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { text: string; now: string; tz: string }) => ({
-    text: String(input.text ?? "").slice(0, 500),
+    text: String(input.text ?? "").slice(0, 1000),
     now: String(input.now ?? "").slice(0, 80),
     tz: String(input.tz ?? "UTC").slice(0, 60),
   }))
   .handler(async ({ data }): Promise<{ plan: CollabPlan | null; error?: string }> => {
     try {
       const text = await ask(
-        `You plan activities for two friends doing something together. Current local time: ${data.now} (timezone ${data.tz}). Turn the idea into one clear shared plan. Reply ONLY with JSON: {"title": short friendly title (max 8 words), "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (default 30 minutes before due_at), "notes": 1-3 short helpful lines (what to bring, steps, place) or null}.`,
+        `You plan activities for two friends doing something together. ${LANG} ${TIME_RULES} Current local time: ${data.now} (timezone ${data.tz}). Turn the idea into one clear shared plan. Reply ONLY with JSON: {"title": short friendly title (max 8 words), "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (default 30 minutes before due_at), "notes": 1-3 short helpful lines (what to bring, steps, place) or null}.`,
         data.text,
       );
       const p = extractJson(text) as Partial<CollabPlan> | null;

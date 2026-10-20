@@ -1,7 +1,8 @@
+import { createPortal } from "react-dom";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
-import { Bell, Plus, Trash2, Check, Repeat, List, CalendarDays, ChevronLeft, ChevronRight, Clock, Pencil } from "lucide-react";
+import { Bell, Plus, Trash2, Check, Repeat, List, CalendarDays, ChevronLeft, ChevronRight, Clock, Pencil, X } from "lucide-react";
 import { tap } from "@/lib/haptics";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,9 +231,32 @@ function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => v
   start.setDate(start.getDate() - ((start.getDay() + 6) % 7) + offset * 7);
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
   const today = new Date();
+  const [openDay, setOpenDay] = useState<Date | null>(null);
+  const dayList = openDay ? tasks.filter((t) => t.due_at && sameDay(new Date(t.due_at), openDay)).sort((a, b) => a.due_at!.localeCompare(b.due_at!)) : [];
 
   return (
     <div className="space-y-3">
+      {openDay && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50 p-4" onClick={() => setOpenDay(null)}>
+          <div className="keep-bubble-in flex max-h-[80dvh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-background" onClick={(e) => e.stopPropagation()}>
+            <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+              <p className="font-display font-semibold">{openDay.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}</p>
+              <button onClick={() => setOpenDay(null)} aria-label="Close" className="rounded-full p-1.5 hover:bg-muted"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto p-4">
+              {!dayList.length && <p className="py-6 text-center text-sm text-muted-foreground">Nothing planned.</p>}
+              {dayList.map((t) => (
+                <button key={t.id} onClick={() => onToggle(t)} className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left">
+                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${t.done ? "bg-primary text-primary-foreground" : ""}`}>{t.done && <Check className="h-3 w-3" />}</span>
+                  <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-muted-foreground line-through" : "font-medium"}`}>{t.title}</span>
+                  <span className="text-xs text-muted-foreground">{new Date(t.due_at!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
       <div className="flex items-center justify-between">
         <button onClick={() => setOffset(offset - 1)} aria-label="Previous week" className="rounded-full p-2 hover:bg-muted"><ChevronLeft className="h-4 w-4" /></button>
         <p className="text-sm font-semibold">
@@ -245,23 +269,24 @@ function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => v
           const list = tasks.filter((t) => t.due_at && sameDay(new Date(t.due_at), d));
           const isToday = sameDay(d, today);
           return (
-            <div key={d.toISOString()} className={`min-h-24 rounded-2xl border p-2 ${isToday ? "ring-2 ring-brand-2" : ""}`}>
+            <div key={d.toISOString()} onClick={() => setOpenDay(d)} className={`min-h-24 cursor-pointer rounded-2xl border p-2 transition active:scale-[0.98] ${isToday ? "ring-2 ring-brand-2" : ""}`}>
               <p className="mb-1 text-xs font-semibold text-muted-foreground">
                 {d.toLocaleDateString(undefined, { weekday: "short" })} <span className={isToday ? "text-foreground" : ""}>{d.getDate()}</span>
               </p>
               <div className="space-y-1">
-                {list.map((t) => (
-                  <button key={t.id} onClick={() => onToggle(t)}
+                {list.slice(0, 3).map((t) => (
+                  <button key={t.id} onClick={(e) => { e.stopPropagation(); onToggle(t); }}
                     className={`block w-full truncate rounded-lg px-2 py-1 text-left text-xs ${t.done ? "bg-muted text-muted-foreground line-through" : priorityStyle[t.priority] + " font-medium"}`}>
                     {new Date(t.due_at!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} {t.title}
                   </button>
                 ))}
+                {list.length > 3 && <p className="px-2 text-xs font-semibold text-muted-foreground">+{list.length - 3} more</p>}
               </div>
             </div>
           );
         })}
       </div>
-      <p className="text-xs text-muted-foreground">Tap a task to mark it done. Tasks without a due date show in list view.</p>
+      <p className="text-xs text-muted-foreground">Tap a day to see everything planned. Tap a task to mark it done. Tasks without a due date show in list view.</p>
     </div>
   );
 }

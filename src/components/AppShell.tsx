@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QuickAdd } from "@/components/QuickAdd";
 import { ActivityBell } from "@/components/ActivityBell";
+import { UsernameGate } from "@/components/UsernameGate";
+import { StreakCelebration } from "@/components/StreakCelebration";
 import { Home, ListChecks, Image as ImageIcon, User, Plus, X, Search, Send } from "lucide-react";
 import { toggleTask } from "@/lib/tasks";
 import { applyTheme, readTheme } from "@/lib/theme";
@@ -78,6 +80,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <ReminderWatcher />
+      <UsernameGate />
+      <StreakCelebration />
       <header className={`sticky top-0 z-30 border-b bg-background md:bg-background/90 md:backdrop-blur ${inChat ? "hidden md:block" : ""}`}>
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <Link to="/home" className="font-display text-2xl font-bold text-gradient-brand">
