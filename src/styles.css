@@ -169,7 +169,7 @@
   animation: keep-rise 0.18s ease-out both;
 }
 @keyframes keep-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .keep-reveal { animation: none; } }
+@media (prefers-reduced-motion: reduce), (max-width: 767px) { .keep-reveal { animation: none; } }
 
 /* Chat bubbles */
 .keep-bubble-in { animation: keep-bubble 0.18s cubic-bezier(.2,.9,.3,1.15) both; }
