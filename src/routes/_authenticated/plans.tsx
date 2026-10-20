@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, Plus, Trash2, Check, Repeat, List, CalendarDays, ChevronLeft, ChevronRight, Clock, Pencil, X } from "lucide-react";
 import { tap } from "@/lib/haptics";
 import { toast } from "sonner";
@@ -148,7 +148,7 @@ function PlansPage() {
           )}
         </>
       ) : (
-        <WeekView tasks={tasks} onToggle={toggle} />
+        <WeekView tasks={tasks} onToggle={toggle} onRemove={remove} />
       )}
     </div>
   );
@@ -239,7 +239,7 @@ function TaskRow({ t, onToggle, onRemove, onChanged }: { t: Task; onToggle: (t: 
   );
 }
 
-function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => void }) {
+function WeekView({ tasks, onToggle, onRemove }: { tasks: Task[]; onToggle: (t: Task) => void; onRemove: (id: string) => void }) {
   const [offset, setOffset] = useState(0);
   const start = new Date();
   start.setHours(0, 0, 0, 0);
@@ -247,6 +247,12 @@ function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => v
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d; });
   const today = new Date();
   const [openDay, setOpenDay] = useState<Date | null>(null);
+  useEffect(() => {
+    if (!openDay) return;
+    const k = (e: KeyboardEvent) => e.key === "Escape" && setOpenDay(null);
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [openDay]);
   const dayList = openDay ? tasks.filter((t) => t.due_at && sameDay(new Date(t.due_at), openDay)).sort((a, b) => a.due_at!.localeCompare(b.due_at!)) : [];
 
   return (
@@ -261,11 +267,14 @@ function WeekView({ tasks, onToggle }: { tasks: Task[]; onToggle: (t: Task) => v
             <div className="flex-1 space-y-2 overflow-y-auto p-4">
               {!dayList.length && <p className="py-6 text-center text-sm text-muted-foreground">Nothing planned.</p>}
               {dayList.map((t) => (
-                <button key={t.id} onClick={() => onToggle(t)} className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left">
-                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${t.done ? "bg-primary text-primary-foreground" : ""}`}>{t.done && <Check className="h-3 w-3" />}</span>
-                  <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-muted-foreground line-through" : "font-medium"}`}>{t.title}</span>
-                  <span className="text-xs text-muted-foreground">{new Date(t.due_at!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
-                </button>
+                <div key={t.id} className="flex w-full items-center gap-2 rounded-2xl border p-2 pl-3">
+                  <button onClick={() => onToggle(t)} className="flex min-w-0 flex-1 items-center gap-3 py-1 text-left">
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${t.done ? "bg-primary text-primary-foreground" : ""}`}>{t.done && <Check className="h-3 w-3" />}</span>
+                    <span className={`min-w-0 flex-1 truncate text-sm ${t.done ? "text-muted-foreground line-through" : "font-medium"}`}>{t.title}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(t.due_at!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</span>
+                  </button>
+                  <button onClick={() => onRemove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive active:scale-90"><Trash2 className="h-4 w-4" /></button>
+                </div>
               ))}
             </div>
           </div>
