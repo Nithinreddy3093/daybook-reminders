@@ -161,7 +161,7 @@ function TaskRow({ t, onToggle, onRemove, onChanged }: { t: Task; onToggle: (t: 
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(t.title);
   const start = useRef<{ x: number; y: number; base: number; lock?: "h" | "v" } | null>(null);
-  const OPEN = -144;
+  const OPEN = -216;
 
   const down = (e: React.PointerEvent) => { if (editing) return; start.current = { x: e.clientX, y: e.clientY, base: open ? OPEN : 0 }; };
   const move = (e: React.PointerEvent) => {
@@ -205,6 +205,7 @@ function TaskRow({ t, onToggle, onRemove, onChanged }: { t: Task; onToggle: (t: 
         <div className={`flex h-full ${dx < 0 ? "opacity-100" : "opacity-0"}`}>
           <button onClick={snooze} className="flex w-[72px] flex-col items-center justify-center gap-0.5 bg-accent text-[11px] font-semibold"><Clock className="h-4 w-4" />Snooze</button>
           <button onClick={() => { close(); setEditing(true); }} className="flex w-[72px] flex-col items-center justify-center gap-0.5 bg-foreground text-[11px] font-semibold text-background"><Pencil className="h-4 w-4" />Edit</button>
+          <button onClick={() => { close(); onRemove(t.id); }} className="flex w-[72px] flex-col items-center justify-center gap-0.5 bg-destructive text-[11px] font-semibold text-destructive-foreground"><Trash2 className="h-4 w-4" />Delete</button>
         </div>
       </div>
       <div
@@ -230,7 +231,7 @@ function TaskRow({ t, onToggle, onRemove, onChanged }: { t: Task; onToggle: (t: 
             {t.recurrence !== "none" && <span className="flex items-center gap-1 capitalize"><Repeat className="h-3 w-3" />{t.recurrence}</span>}
           </p>
         </div>
-        <button onClick={() => onRemove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-muted md:opacity-0 md:group-hover:opacity-100">
+        <button onClick={() => onRemove(t.id)} aria-label="Delete" className="rounded-full p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive active:scale-90">
           <Trash2 className="h-4 w-4" />
         </button>
       </div>
