@@ -61,7 +61,7 @@ export const parseTask = createServerFn({ method: "POST" })
     now: String(input.now ?? ""),
     tz: String(input.tz ?? "UTC").slice(0, 60),
   }))
-  .handler(async ({ data }): Promise<{ tasks: ParsedTask[]; task: ParsedTask | null; error?: string }> => {
+  .handler(async ({ data }): Promise<{ tasks: ParsedTask[]; task: ParsedTask | null; error?: string | undefined }> => {
     try {
       const text = await ask(
         `You turn a message into to-do tasks. ${LANG} The message may contain several tasks (split on commas, "and", "then", new lines, numbering) — return EACH as its own task; if one item is a bigger goal, add its concrete steps as separate tasks too (max 10 total). Current local time: ${data.now} (timezone ${data.tz}). ${TIME_RULES} Reply ONLY with a JSON array of {"title": short clear title, "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (15 minutes before due_at when a time exists), "priority": "high"|"medium"|"normal" (high if urgent/important words), "category": one of "Personal","Work","Health","Ideas","Errands" or null, "recurrence": "none"|"daily"|"weekly"|"monthly"}.`,

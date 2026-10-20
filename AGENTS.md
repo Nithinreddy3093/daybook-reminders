@@ -15,3 +15,5 @@
 - Closed-app reminders use Web Push: `public/push-sw.js` (push-only worker, no caching), subscriptions in `push_subscriptions`, and a per-minute managed schedule calling `/api/public/jobs/send-reminders`; `tasks.push_sent_for` prevents duplicate sends. Why: works on workerd via WebCrypto library, no third-party push service.
 - Direct messages live in `messages` with sender/recipient RLS and realtime; friends never get access to tasks or memories. Why: privacy-first social.
 - Streaks shown anywhere come from `profiles.streak` via `liveStreak`. Why: one source so friends and owner see the same number.
+- Social graph is Instagram-style one-way follows (`follows` table); unfollow removes only the caller's own row. Why: following and followers stay independent.
+- New users must pick a unique `profiles.username` via `UsernameGate` (live check through `username_available` RPC). Why: Instagram-like onboarding.
