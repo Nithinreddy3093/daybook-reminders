@@ -54,7 +54,21 @@ function PlansPage() {
     refresh();
   };
   const toggle = async (t: Task) => { await toggleTask(t); refresh(); };
-  const remove = async (id: string) => { await supabase.from("tasks").delete().eq("id", id); refresh(); };
+  const remove = async (id: string) => {
+    const t = tasks.find((x) => x.id === id);
+    tap(10);
+    qc.setQueryData<Task[]>(["tasks"], (old) => old?.filter((x) => x.id !== id));
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+    if (error) { toast.error("Couldn't delete"); refresh(); return; }
+    toast("Task deleted", {
+      id: "task-deleted",
+      action: t ? { label: "Undo", onClick: async () => {
+        const { id: _i, created_at: _c, ...rest } = t as Task & { created_at: string };
+        await supabase.from("tasks").insert({ ...rest, push_sent_for: null } as never); refresh();
+      } } : undefined,
+    });
+    refresh();
+  };
 
   const filtered = useMemo(() => {
     const now = new Date();

@@ -24,8 +24,9 @@ export function QuickAdd({ onDone, autoFocus }: { onDone?: () => void; autoFocus
       const { error } = await supabase.from("tasks").insert(list);
       if (error) throw error;
       const first = list[0]!;
-      toast.success(list.length > 1 ? `Added ${list.length} tasks` : `Added “${first.title}”`, {
-        description: list.length > 1 ? list.map((t) => "• " + t.title + (t.due_at ? ` — ${fmtWhen(t.due_at)}` : "")).join("\n") : [first.due_at && `Due ${fmtWhen(first.due_at)}`, first.recurrence !== "none" && `Repeats ${first.recurrence}`].filter(Boolean).join(" · ") || undefined,
+      toast.success(list.length > 1 ? `Added ${list.length} separate tasks` : `Added “${first.title}”`, {
+        id: "quick-add",
+        description: list.length > 1 ? list.slice(0, 4).map((t) => "• " + t.title + (t.due_at ? ` — ${fmtWhen(t.due_at)}` : "")).join("\n") + (list.length > 4 ? `\n+${list.length - 4} more` : "") : [first.due_at && `Due ${fmtWhen(first.due_at)}`, first.recurrence !== "none" && `Repeats ${first.recurrence}`].filter(Boolean).join(" · ") || undefined,
       });
       setText("");
       qc.invalidateQueries({ queryKey: ["tasks"] });
