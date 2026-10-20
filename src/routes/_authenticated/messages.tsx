@@ -114,7 +114,7 @@ function InboxPage() {
           ))}
         </ul>
       )}
-      <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> End-to-end private between you and your friend.</p>
+      <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><Lock className="h-3 w-3" /> Only you and your friend can read these.</p>
     </div>
   );
 }
