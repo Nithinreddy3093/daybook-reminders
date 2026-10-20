@@ -57,20 +57,20 @@ const TIME_RULES = "Time words: morning=09:00, afternoon=14:00, evening=18:00, n
 export const parseTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { text: string; now: string; tz: string }) => ({
-    text: String(input.text ?? "").slice(0, 1500),
+    text: String(input.text ?? "").slice(0, 4000),
     now: String(input.now ?? ""),
     tz: String(input.tz ?? "UTC").slice(0, 60),
   }))
   .handler(async ({ data }): Promise<{ tasks: ParsedTask[]; task: ParsedTask | null; error?: string | undefined }> => {
     try {
       const text = await ask(
-        `You turn a message into to-do tasks. ${LANG} The message may contain several tasks (split on commas, "and", "then", new lines, numbering) — return EACH as its own task; if one item is a bigger goal, add its concrete steps as separate tasks too (max 10 total). Current local time: ${data.now} (timezone ${data.tz}). ${TIME_RULES} Reply ONLY with a JSON array of {"title": short clear title, "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (15 minutes before due_at when a time exists), "priority": "high"|"medium"|"normal" (high if urgent/important words), "category": one of "Personal","Work","Health","Ideas","Errands" or null, "recurrence": "none"|"daily"|"weekly"|"monthly"}.`,
+        `You turn a message into to-do tasks. ${LANG} The message may contain several tasks (split on commas, "and", "then", new lines, numbering, bullet points). SCHEDULES: if the message is a timetable with lines like "8:00 AM – 10:00 AM: Research paper work", return EXACTLY one task per line/time block — never merge, never add extra sub-steps; title = the activity text without the times; due_at = the block START time today (or the stated day); remind_at = that same start time; include break/rest blocks too. For a single non-schedule goal you may add a few concrete steps as separate tasks. Max 25 tasks. Current local time: ${data.now} (timezone ${data.tz}). ${TIME_RULES} Reply ONLY with a JSON array of {"title": short clear title, "due_at": ISO 8601 with offset or null, "remind_at": ISO 8601 with offset or null (15 minutes before due_at when a time exists, except schedule blocks use start time), "priority": "high"|"medium"|"normal" (high if urgent/important words), "category": one of "Personal","Work","Health","Ideas","Errands" or null, "recurrence": "none"|"daily"|"weekly"|"monthly"}.`,
         data.text,
       );
       const raw = extractJson(text);
       const arr = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Partial<ParsedTask>[];
       const valid = (d: unknown) => (typeof d === "string" && !isNaN(Date.parse(d)) ? new Date(d).toISOString() : null);
-      const tasks = arr.filter((p) => p?.title).slice(0, 10).map((p) => ({
+      const tasks = arr.filter((p) => p?.title).slice(0, 25).map((p) => ({
         title: String(p.title).slice(0, 200),
         due_at: valid(p.due_at),
         remind_at: valid(p.remind_at),
