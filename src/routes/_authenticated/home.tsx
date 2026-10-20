@@ -17,14 +17,16 @@ export const Route = createFileRoute("/_authenticated/home")({
       { property: "og:description", content: "Your day at a glance." },
     ],
   }),
-  loader: ({ context }) =>
-    Promise.all([context.queryClient.ensureQueryData(tasksQuery), context.queryClient.ensureQueryData(memoriesQuery)]),
+  loader: ({ context }) => {
+    context.queryClient.prefetchQuery(memoriesQuery);
+    return context.queryClient.ensureQueryData(tasksQuery);
+  },
   component: HomePage,
 });
 
 function HomePage() {
   const { data: tasks } = useSuspenseQuery(tasksQuery);
-  const { data: memories } = useSuspenseQuery(memoriesQuery);
+  const { data: memories = [] } = useQuery(memoriesQuery);
   const open = tasks.filter((t) => !t.done);
   const doneCount = tasks.length - open.length;
   const next = open
