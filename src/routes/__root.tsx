@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SPLASH_LOGO } from "../lib/splash-logo";
 
 function NotFoundComponent() {
   return (
@@ -118,14 +119,16 @@ function RootShell({ children }: { children: ReactNode }) {
       </head>
       <body>
         <div id="keep-splash" aria-hidden="true" suppressHydrationWarning>
-          <img src="/icon-512.png" alt="" className="keep-splash-logo" width={96} height={96} />
+          <img src={SPLASH_LOGO} alt="" className="keep-splash-logo" width={96} height={96} decoding="sync" />
           <div className="keep-splash-word">Keep</div>
+          <div className="keep-splash-tap">Tap to start</div>
         </div>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{if(sessionStorage.getItem("keep-splash"))document.getElementById("keep-splash").style.display="none";else{sessionStorage.setItem("keep-splash","1");if(localStorage.getItem("keep-sound")!=="off"){var C=window.AudioContext||window.webkitAudioContext;if(C){var a=new C(),done=false,play=function(){if(done)return;done=true;var t=a.currentTime+.02;[523.25,659.25,783.99,1046.5].forEach(function(f,i){var o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.1);g.gain.linearRampToValueAtTime(.14,t+i*.1+.02);g.gain.exponentialRampToValueAtTime(.0001,t+i*.1+.9);o.connect(g);g.connect(a.destination);o.start(t+i*.1);o.stop(t+i*.1+1)})},tryPlay=function(){if(a.state==="running")play();else a.resume().then(function(){if(a.state==="running")play()}).catch(function(){})},onTap=function(){tryPlay();rm()},rm=function(){["pointerdown","touchstart","keydown"].forEach(function(e){window.removeEventListener(e,onTap,true)})};tryPlay();["pointerdown","touchstart","keydown"].forEach(function(e){window.addEventListener(e,onTap,{capture:true,passive:true})});setTimeout(rm,4000)}}}}catch(e){}`,
+            __html: `(function(){var el=document.getElementById("keep-splash");if(!el)return;var start=Date.now(),hidden=false,needTap=false,ready=false;function hide(){if(hidden)return;hidden=true;el.classList.add("keep-splash-hide");setTimeout(function(){el.remove()},400)}function check(){if(hidden)return;if(ready&&!needTap&&Date.now()-start>=900)hide()}window.__keepSplashReady=function(){ready=true;check();setTimeout(check,950)};setTimeout(hide,needTap?4000:3000);var soundOn=true;try{soundOn=localStorage.getItem("keep-sound")!=="off"}catch(e){}var C=soundOn&&(window.AudioContext||window.webkitAudioContext);if(!C)return;var a,played=false;try{a=new C()}catch(e){return}function play(){if(played)return;played=true;var t=a.currentTime+.02;[523.25,659.25,783.99,1046.5].forEach(function(f,i){var o=a.createOscillator(),g=a.createGain();o.type="sine";o.frequency.value=f;g.gain.setValueAtTime(0,t+i*.1);g.gain.linearRampToValueAtTime(.14,t+i*.1+.02);g.gain.exponentialRampToValueAtTime(.0001,t+i*.1+.9);o.connect(g);g.connect(a.destination);o.start(t+i*.1);o.stop(t+i*.1+1)})}function onTap(){rm();try{a.resume()}catch(e){}play();if(needTap){needTap=false;el.classList.remove("keep-splash-needtap");hide()}}function rm(){["pointerdown","touchstart","keydown"].forEach(function(e){window.removeEventListener(e,onTap,true)})}["pointerdown","touchstart","keydown"].forEach(function(e){window.addEventListener(e,onTap,{capture:true,passive:true})});setTimeout(rm,5000);var p;try{p=a.resume()}catch(e){}Promise.resolve(p).then(function(){if(a.state==="running")play();else{needTap=true;el.classList.add("keep-splash-needtap");setTimeout(function(){needTap=false;check();setTimeout(hide,300)},4000)}}).catch(function(){})})();`,
           }}
         />
+
         {children}
         <Scripts />
       </body>
@@ -137,14 +140,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
 
-  // Remove the splash once it fades so it never blocks taps (important in home-screen mode).
+  // Tell the splash the first screen has painted, so it fades straight into the app.
   useEffect(() => {
-    const el = document.getElementById("keep-splash");
-    if (!el) return;
-    const kill = () => el.remove();
-    el.addEventListener("animationend", (e) => { if (e.animationName === "keep-splash-out") kill(); });
-    const t = setTimeout(kill, 1200);
-    return () => clearTimeout(t);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      (window as unknown as { __keepSplashReady?: () => void }).__keepSplashReady?.();
+    }));
   }, []);
 
   useEffect(() => {
