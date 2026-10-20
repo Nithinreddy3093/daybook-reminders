@@ -241,21 +241,26 @@ function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [atBottom, setAtBottom] = useState(true);
   const [heart, setHeart] = useState<string | null>(null);
-  const react = async (mid: string, emoji = "❤️") => {
+  const react = async (mid: string, emoji = "❤️", likeOnly = false) => {
     if (!uid || mid.startsWith("tmp-")) return;
     const cur = msgs.find((m) => m.id === mid)?.reactions ?? {};
     const removing = cur[uid] === emoji;
+    if (likeOnly && removing) { tap(8); setHeart(mid); setTimeout(() => setHeart(null), 700); return; }
     if (!removing) { tap([8, 40, 8]); setHeart(mid); setTimeout(() => setHeart(null), 700); }
     const next = { ...cur }; if (removing) delete next[uid]; else next[uid] = emoji;
     qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid ? { ...m, reactions: next } : m) } : old);
     try { await reactMessage(mid, emoji); } catch { toast.error("Couldn't react"); qc.invalidateQueries({ queryKey: key }); }
   };
   const lastTap = useRef<{ id: string; t: number }>({ id: "", t: 0 });
+  const lastTouch = useRef(0);
   const onBubbleTouch = (mid: string, e: React.TouchEvent) => {
-    const now = e.timeStamp;
-    if (lastTap.current.id === mid && now - lastTap.current.t < 300) { e.preventDefault(); lastTap.current = { id: "", t: 0 }; react(mid); }
+    if (e.changedTouches.length !== 1) return;
+    const now = Date.now();
+    lastTouch.current = now;
+    if (lastTap.current.id === mid && now - lastTap.current.t < 350) { e.preventDefault(); lastTap.current = { id: "", t: 0 }; react(mid, "❤️", true); }
     else lastTap.current = { id: mid, t: now };
   };
+  const onBubbleDbl = (mid: string) => { if (Date.now() - lastTouch.current > 800) react(mid, "❤️", true); };
 
   // Voice notes
   const [recording, setRecording] = useState(false);
@@ -323,9 +328,9 @@ function ChatPage() {
             ? `rounded-3xl ${prevSame ? "rounded-tr-md" : ""} ${nextSame ? "rounded-br-md" : ""}`
             : `rounded-3xl ${prevSame ? "rounded-tl-md" : ""} ${nextSame ? "rounded-bl-md" : ""}`;
           return (
-            <div key={m.id} className={`relative flex ${i >= msgs.length - 3 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
+            <div key={m.id} className={`relative flex ${i === msgs.length - 1 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
 >
-              <div className="relative max-w-[78%] select-none [-webkit-touch-callout:none]" onDoubleClick={() => react(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
+              <div className="relative max-w-[78%] select-none [-webkit-touch-callout:none]" onDoubleClick={() => onBubbleDbl(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
               {heart === m.id && <span className="keep-heart absolute left-1/2 top-1/2 z-10 -ml-5 -mt-6 text-4xl">❤️</span>}
               {m.reactions && Object.keys(m.reactions).length > 0 && (
                 <button type="button" onClick={(e) => { e.stopPropagation(); if (uid && m.reactions?.[uid]) react(m.id, m.reactions[uid]); }}
