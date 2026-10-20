@@ -327,8 +327,15 @@ function ChatPage() {
           const r = mine
             ? `rounded-3xl ${prevSame ? "rounded-tr-md" : ""} ${nextSame ? "rounded-br-md" : ""}`
             : `rounded-3xl ${prevSame ? "rounded-tl-md" : ""} ${nextSame ? "rounded-bl-md" : ""}`;
+          const d = new Date(m.created_at);
+          const pd = msgs[i - 1] ? new Date(msgs[i - 1]!.created_at) : null;
+          const gap = !pd || d.getTime() - pd.getTime() > 60 * 60 * 1000 || d.toDateString() !== pd.toDateString();
+          const today = new Date(); const yest = new Date(Date.now() - 864e5);
+          const label = d.toDateString() === today.toDateString() ? "Today" : d.toDateString() === yest.toDateString() ? "Yesterday" : d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
           return (
-            <div key={m.id} className={`relative flex ${i === msgs.length - 1 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
+            <div key={m.id}>
+            {gap && <p className="mb-1 mt-5 text-center text-[11px] font-medium text-muted-foreground">{label} · {d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</p>}
+            <div className={`relative flex ${i === msgs.length - 1 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame && !gap ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
 >
               <div className="relative max-w-[78%] select-none [-webkit-touch-callout:none]" onDoubleClick={() => onBubbleDbl(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
               {heart === m.id && <span className="keep-heart absolute left-1/2 top-1/2 z-10 -ml-5 -mt-6 text-4xl">❤️</span>}
@@ -371,6 +378,7 @@ function ChatPage() {
                 </div>
               )}
               </div>
+            </div>
             </div>
           );
         })}
