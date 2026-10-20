@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Bell, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,9 +70,8 @@ export function ActivityBell() {
               {!followers.length && <p className="py-6 text-center text-sm text-muted-foreground">No activity yet.</p>}
               {followers.map((f) => (
                 <div key={f.id} className={new Date(f.followed_at).getTime() > seen ? "rounded-xl bg-muted/50" : ""}>
-                  <Link to="/u/$id" params={{ id: f.id }} onClick={() => setOpen(false)} className="block">
-                    <ProfileRow p={{ ...f, bio: `started following you · ${ago(f.followed_at)}` }} action={<span onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}><FollowButton id={f.id} /></span>} />
-                  </Link>
+                  <ProfileRow p={f} action={<FollowButton id={f.id} />} />
+                  <p className="-mt-2 pb-2 pl-14 text-xs text-muted-foreground">started following you · {ago(f.followed_at)}</p>
                 </div>
               ))}
             </div>
