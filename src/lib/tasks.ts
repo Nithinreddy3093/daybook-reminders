@@ -18,7 +18,8 @@ export function nextOccurrence(iso: string | null, rec: string): string | null {
 
 /** Toggle done; completing a recurring task schedules its next occurrence. */
 export async function toggleTask(t: Task) {
-  await supabase.from("tasks").update({ done: !t.done }).eq("id", t.id);
+  const { data, error } = await supabase.from("tasks").update({ done: !t.done }).eq("id", t.id).select("id");
+  if (error || !data?.length) throw new Error("Couldn't update this task");
   if (!t.done && t.recurrence !== "none") {
     await supabase.from("tasks").insert({
       title: t.title, notes: t.notes, priority: t.priority, category: t.category, recurrence: t.recurrence,

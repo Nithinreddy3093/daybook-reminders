@@ -53,13 +53,17 @@ function PlansPage() {
     setTitle(""); setDue(""); setRemind(""); setPriority("normal"); setCategory(""); setRecurrence("none");
     refresh();
   };
-  const toggle = async (t: Task) => { await toggleTask(t); refresh(); };
+  const toggle = async (t: Task) => {
+    qc.setQueryData<Task[]>(["tasks"], (old) => old?.map((x) => x.id === t.id ? { ...x, done: !t.done } : x));
+    try { await toggleTask(t); } catch { toast.error("Couldn't update this task"); }
+    refresh();
+  };
   const remove = async (id: string) => {
     const t = tasks.find((x) => x.id === id);
     tap(10);
     qc.setQueryData<Task[]>(["tasks"], (old) => old?.filter((x) => x.id !== id));
-    const { error } = await supabase.from("tasks").delete().eq("id", id);
-    if (error) { toast.error("Couldn't delete"); refresh(); return; }
+    const { data: gone, error } = await supabase.from("tasks").delete().eq("id", id).select("id");
+    if (error || !gone?.length) { toast.error("Couldn't delete this task"); refresh(); return; }
     toast("Task deleted", {
       id: "task-deleted",
       action: t ? { label: "Undo", onClick: async () => {

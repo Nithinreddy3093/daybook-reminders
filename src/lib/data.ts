@@ -4,9 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 export const tasksQuery = queryOptions({
   queryKey: ["tasks"],
   queryFn: async () => {
+    const { data: s } = await supabase.auth.getSession();
+    const uid = s.session?.user.id;
+    if (!uid) return [];
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
+      .eq("user_id", uid)
       .order("done")
       .order("due_at", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false });
