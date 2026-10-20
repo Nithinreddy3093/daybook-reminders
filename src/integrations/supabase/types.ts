@@ -310,6 +310,19 @@ export type Database = {
         }[]
       }
       react_message: { Args: { _emoji: string; _msg: string }; Returns: Json }
+      recent_followers: {
+        Args: never
+        Returns: {
+          bio: string
+          display_name: string
+          followed_at: string
+          follows_back: boolean
+          id: string
+          last_active: string
+          streak: number
+          username: string
+        }[]
+      }
       respond_friend_request: {
         Args: { _accept: boolean; _sender: string }
         Returns: undefined
@@ -330,6 +343,7 @@ export type Database = {
         }[]
       }
       unfriend: { Args: { _other: string }; Returns: undefined }
+      username_available: { Args: { _name: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

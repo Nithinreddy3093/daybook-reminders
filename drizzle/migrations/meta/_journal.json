@@ -99,6 +99,13 @@
       "when": 1792411686352,
       "tag": "0013_friends_unfriend_realtime",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792471061443,
+      "tag": "0014_usernames_followers_activity",
+      "breakpoints": true
     }
   ]
 }
