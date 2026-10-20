@@ -24,7 +24,7 @@ export function StreakCelebration() {
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-foreground/60 p-6" onClick={() => setShow(null)}>
       {Array.from({ length: 18 }, (_, i) => (
-        <span key={i} className="keep-confetti" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: `var(--brand-${(i % 3) + 1})` }} />
+        <span key={i} className="keep-confetti" style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 6) * 0.12}s`, background: `(["var(--brand)", "var(--brand-2)", "var(--brand-3)"] as const)[i % 3]` }} />
       ))}
       <div className="keep-bubble-in w-full max-w-xs rounded-3xl bg-background p-6 text-center" onClick={(e) => e.stopPropagation()}>
         <div className="keep-flame mx-auto text-7xl">🔥</div>

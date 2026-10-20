@@ -184,3 +184,10 @@ button, a { touch-action: manipulation; }
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+
+/* Streak milestone celebration */
+.keep-confetti { position: absolute; top: -12px; width: 8px; height: 14px; border-radius: 2px; animation: keep-confetti 1.8s ease-in forwards; pointer-events: none; }
+@keyframes keep-confetti { to { transform: translateY(105vh) rotate(540deg); opacity: 0.2; } }
+.keep-flame { animation: keep-flame 1.2s ease-in-out infinite alternate; display: inline-block; }
+@keyframes keep-flame { from { transform: scale(0.92) rotate(-4deg); } to { transform: scale(1.08) rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) { .keep-confetti, .keep-flame { animation: none; } }
