@@ -118,6 +118,10 @@
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
   @media (max-width: 767px) {
     input, textarea, select { font-size: 16px !important; }
+    /* Blur and big shadows are expensive on phones */
+    .backdrop-blur, .backdrop-blur-sm, .backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: 0 2px 8px rgb(0 0 0 / 0.12) !important; }
+    a, button { -webkit-tap-highlight-color: transparent; }
   }
   body {
     background-color: var(--color-background);
