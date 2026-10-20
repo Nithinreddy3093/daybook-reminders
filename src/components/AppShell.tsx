@@ -46,7 +46,7 @@ function ReminderWatcher() {
                 <button className="rounded-full border px-3 py-1 text-xs" onClick={() => snooze(15)}>Snooze 15m</button>
                 <button className="rounded-full border px-3 py-1 text-xs" onClick={() => snooze(60)}>Snooze 1h</button>
                 <button className="rounded-full bg-primary px-3 py-1 text-xs text-primary-foreground"
-                  onClick={async () => { await toggleTask(t); qc.invalidateQueries({ queryKey: ["tasks"] }); toast("Marked done ✓"); }}>Done</button>
+                  onClick={async () => { try { await toggleTask(t); toast("Marked done ✓"); } catch { toast.error("Couldn't update this task"); } qc.invalidateQueries({ queryKey: ["tasks"] }); }}>Done</button>
               </div>
             ),
             duration: 60000,
