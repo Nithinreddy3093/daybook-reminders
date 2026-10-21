@@ -27,6 +27,7 @@ function tone(a: AudioContext, freq: number, start: number, dur: number, vol: nu
 }
 
 export function playSound(name: SoundName) {
+  if (name === "received" && typeof window !== "undefined" && localStorage.getItem("keep-msg-sound") === "off") return;
   const a = audio();
   if (!a) return;
   if (name === "reminder") {

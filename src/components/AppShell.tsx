@@ -30,13 +30,17 @@ function ReminderWatcher() {
     const check = () => {
       const now = Date.now();
       tasks?.forEach((t) => {
-        if (!t.remind_at || t.done || fired.current.has(t.id)) return;
+        if (!t.remind_at || t.done) return;
+        const key = `${t.id}@${t.remind_at}`;
+        if (fired.current.has(key)) return;
+        if (t.reminded_for && +new Date(t.reminded_for) === +new Date(t.remind_at)) return;
         const at = new Date(t.remind_at).getTime();
         if (at <= now && now - at < 1000 * 60 * 60 * 12) {
-          fired.current.add(t.id);
+          fired.current.add(key);
+          // Mark as shown right away so reopening Keep or swiping it away won't show it again.
+          void supabase.from("tasks").update({ reminded_for: t.remind_at }).eq("id", t.id).then(() => {});
           const snooze = async (min: number) => {
             await supabase.from("tasks").update({ remind_at: new Date(Date.now() + min * 60000).toISOString() }).eq("id", t.id);
-            fired.current.delete(t.id);
             qc.invalidateQueries({ queryKey: ["tasks"] });
             toast(`Snoozed ${min >= 60 ? min / 60 + "h" : min + "m"}`);
           };

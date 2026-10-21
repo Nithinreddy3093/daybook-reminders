@@ -14,14 +14,15 @@ export const Route = createFileRoute("/api/public/jobs/send-reminders")({
         const since = new Date(now.getTime() - 12 * 3600_000).toISOString();
         const { data: tasks, error } = await supabaseAdmin
           .from("tasks")
-          .select("id, user_id, title, remind_at, push_sent_for")
+          .select("id, user_id, title, remind_at, push_sent_for, reminded_for")
           .eq("done", false)
           .lte("remind_at", now.toISOString())
           .gte("remind_at", since)
           .limit(200);
         if (error) return Response.json({ error: "query failed" }, { status: 500 });
 
-        const due = (tasks ?? []).filter((t) => !t.push_sent_for || +new Date(t.push_sent_for) !== +new Date(t.remind_at!));
+        const same = (a: string | null, b: string | null) => !!a && !!b && +new Date(a) === +new Date(b);
+        const due = (tasks ?? []).filter((t) => !same(t.push_sent_for, t.remind_at) && !same(t.reminded_for, t.remind_at));
         let sent = 0;
         for (const t of due) {
           const { data: subs } = await supabaseAdmin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", t.user_id);
