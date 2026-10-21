@@ -10,10 +10,14 @@ self.addEventListener("push", (event) => {
     const list = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     const url = d.url || "/home";
     const visible = list.filter((c) => c.visibilityState === "visible");
-    // Already looking at this chat: no alert.
-    if (url.startsWith("/chat/") && visible.some((c) => new URL(c.url).pathname === url)) return;
-    // Keep is open on another screen: the in-app pop-up handles chat messages.
-    if (url.startsWith("/chat/") && visible.length) return;
+    // Keep is open on screen: the app shows its own pop-up. Phones require a notification for every push,
+    // so show it silently and close it right away.
+    if (url.startsWith("/chat/") && visible.length) {
+      await self.registration.showNotification(d.title || "Keep", { body: d.body || "", tag: "keep-silent", silent: true });
+      const ns = await self.registration.getNotifications({ tag: "keep-silent" });
+      ns.forEach((n) => n.close());
+      return;
+    }
     list.forEach((c) => c.postMessage({ type: "keep-push", sound: d.sound || "reminder" }));
     await self.registration.showNotification(d.title || "Keep", {
       body: d.body || "",
