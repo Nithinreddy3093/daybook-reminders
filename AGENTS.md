@@ -17,3 +17,4 @@
 - Streaks shown anywhere come from `profiles.streak` via `liveStreak`. Why: one source so friends and owner see the same number.
 - Social graph is Instagram-style one-way follows (`follows` table); unfollow removes only the caller's own row. Why: following and followers stay independent.
 - New users must pick a unique `profiles.username` via `UsernameGate` (live check through `username_available` RPC). Why: Instagram-like onboarding.
+- Message pushes fire instantly via `notifyMessage` (sender-only, claims `messages.pushed_at`); the per-minute job is only a fallback. Why: no delay on chat alerts.

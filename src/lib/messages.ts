@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PublicProfile } from "@/lib/social";
+import { notifyMessage } from "@/lib/push.functions";
+
+function ping(id?: string) { if (id) void notifyMessage({ data: { messageId: id } }).catch(() => {}); }
 
 export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string; kind?: string; plan?: { title: string; due_at?: string | null; remind_at?: string | null; notes?: string | null } | null; plan_status?: string | null; attachment?: Attachment | null; reactions?: Record<string, string> | null; hidden_for?: string[] | null };
 
@@ -52,8 +55,9 @@ export async function getThread(other: string) {
 export async function sendMessage(to: string, content: string) {
   const text = content.trim().slice(0, 2000);
   if (!text) return;
-  const { error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: text });
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: text }).select("id").single();
   if (error) throw error;
+  ping(row?.id);
 }
 
 export async function markRead(from: string) {
@@ -64,8 +68,9 @@ export async function markRead(from: string) {
 export async function sendPlan(to: string, plan: { title: string; due_at: string | null; remind_at: string | null; notes?: string | null }) {
   const title = plan.title.trim().slice(0, 200);
   if (!title) return;
-  const { error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `📅 ${title}`, kind: "plan", plan });
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `📅 ${title}`, kind: "plan", plan }).select("id").single();
   if (error) throw error;
+  ping(row?.id);
 }
 
 export async function respondPlan(id: string, accept: boolean) {
@@ -82,8 +87,9 @@ export async function sendFile(to: string, file: File, caption = "") {
   if (up.error) throw up.error;
   const icon = file.type.startsWith("image/") ? "📷 Photo" : file.type.startsWith("video/") ? "🎬 Video" : file.type.startsWith("audio/") ? "🎤 Voice note" : `📎 ${file.name}`;
   const attachment: Attachment = { path, name: file.name, type: file.type, size: file.size };
-  const { error } = await supabase.from("messages").insert({ sender_id: uid, recipient_id: to, content: (caption.trim() || icon).slice(0, 2000), kind: "file", attachment });
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: uid, recipient_id: to, content: (caption.trim() || icon).slice(0, 2000), kind: "file", attachment }).select("id").single();
   if (error) throw error;
+  ping(row?.id);
 }
 
 const urlCache = new Map<string, { url: string; exp: number }>();
@@ -100,8 +106,9 @@ export async function sendChecklist(to: string, title: string, items: string[]) 
   const list = items.map((t) => t.trim()).filter(Boolean).slice(0, 50);
   if (!list.length) return;
   const name = title.trim().slice(0, 120) || "Checklist";
-  const { error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `✅ ${name}`, kind: "checklist", plan: { title: name, items: list.map((text) => ({ text })) } });
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `✅ ${name}`, kind: "checklist", plan: { title: name, items: list.map((text) => ({ text })) } }).select("id").single();
   if (error) throw error;
+  ping(row?.id);
 }
 
 export async function updateChecklist(id: string, item: string | null, add: string | null = null) {

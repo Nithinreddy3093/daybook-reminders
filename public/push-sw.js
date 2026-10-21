@@ -8,6 +8,16 @@ self.addEventListener("push", (event) => {
   event.waitUntil((async () => {
     // If Keep is open, let the page play its own chime too.
     const list = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const url = d.url || "/home";
+    const visible = list.filter((c) => c.visibilityState === "visible");
+    // Keep is open on screen: the app shows its own pop-up. Phones require a notification for every push,
+    // so show it silently and close it right away.
+    if (url.startsWith("/chat/") && visible.length) {
+      await self.registration.showNotification(d.title || "Keep", { body: d.body || "", tag: "keep-silent", silent: true });
+      const ns = await self.registration.getNotifications({ tag: "keep-silent" });
+      ns.forEach((n) => n.close());
+      return;
+    }
     list.forEach((c) => c.postMessage({ type: "keep-push", sound: d.sound || "reminder" }));
     await self.registration.showNotification(d.title || "Keep", {
       body: d.body || "",
