@@ -61,7 +61,7 @@ function ChatPage() {
   const input = useRef<HTMLTextAreaElement>(null);
   const first = useRef(true);
 
-  const msgs: Thread["messages"] = thread.data?.messages ?? [];
+  const msgs: Thread["messages"] = (thread.data?.messages ?? []).filter((m) => !(uid && (m as Message).hidden_for?.includes(uid)));
   const uid = thread.data?.uid;
   // Follow the phone's visible area so the keyboard sits right under the composer.
   const [vvh, setVvh] = useState<number | null>(null);
@@ -84,6 +84,11 @@ function ChatPage() {
   useEffect(() => {
     const ch = supabase.channel(`chat-${id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
+        if (p.eventType === "DELETE") {
+          const gone = (p.old as { id?: string })?.id;
+          if (gone) qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.filter((m) => m.id !== gone) } : old);
+          return;
+        }
         const row = p.new as Message;
         if (!row?.id || (row.sender_id !== id && row.recipient_id !== id)) return;
         qc.setQueryData<Thread>(key, (old) => {
@@ -252,6 +257,28 @@ function ChatPage() {
     qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.map((m) => m.id === mid ? { ...m, reactions: next } : m) } : old);
     try { await reactMessage(mid, emoji); } catch { toast.error("Couldn't react"); qc.invalidateQueries({ queryKey: key }); }
   };
+  // Unsend / remove for me
+  const [actionMsg, setActionMsg] = useState<Message | null>(null);
+  const press = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startPress = (m: Message) => { if (m.id.startsWith("tmp-")) return; press.current = setTimeout(() => { tap(15); setActionMsg(m); }, 500); };
+  const endPress = () => { if (press.current) clearTimeout(press.current); press.current = null; };
+  const removeMsg = async (m: Message, forAll: boolean) => {
+    setActionMsg(null);
+    const prev = qc.getQueryData<Thread>(key);
+    qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: old.messages.filter((x) => x.id !== m.id) } : old);
+    try {
+      if (forAll) {
+        const { error, count } = await supabase.from("messages").delete({ count: "exact" }).eq("id", m.id);
+        if (error || !count) throw error ?? new Error("not deleted");
+        if (m.attachment?.path) await supabase.storage.from("chat-files").remove([m.attachment.path]);
+        toast("Message unsent");
+      } else {
+        const { error } = await supabase.rpc("hide_message", { _msg: m.id });
+        if (error) throw error;
+      }
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+    } catch { qc.setQueryData(key, prev); toast.error("Couldn't remove message"); }
+  };
   const lastTap = useRef<{ id: string; t: number }>({ id: "", t: 0 });
   const lastTouch = useRef(0);
   const onBubbleTouch = (mid: string, e: React.TouchEvent) => {
@@ -338,7 +365,7 @@ function ChatPage() {
             {gap && <p className="mb-1 mt-5 text-center text-[11px] font-medium text-muted-foreground">{label} · {d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</p>}
             <div className={`relative flex ${i === msgs.length - 1 ? "keep-bubble-in" : ""} ${mine ? "justify-end" : "justify-start"} ${prevSame && !gap ? "mt-0.5" : "mt-3"} ${m.reactions && Object.keys(m.reactions).length ? "mb-3" : ""}`}
 >
-              <div className="relative max-w-[78%] select-none [-webkit-touch-callout:none]" onDoubleClick={() => onBubbleDbl(m.id)} onTouchEnd={(e) => onBubbleTouch(m.id, e)} style={{ touchAction: "manipulation" }}>
+              <div className="relative max-w-[78%] select-none [-webkit-touch-callout:none]" onDoubleClick={() => onBubbleDbl(m.id)} onTouchStart={() => startPress(m)} onTouchMove={endPress} onTouchEnd={(e) => { endPress(); onBubbleTouch(m.id, e); }} onContextMenu={(e) => { e.preventDefault(); if (!m.id.startsWith("tmp-")) setActionMsg(m); }} style={{ touchAction: "manipulation" }}>
               {heart === m.id && <span className="keep-heart absolute left-1/2 top-1/2 z-10 -ml-5 -mt-6 text-4xl">❤️</span>}
               {m.reactions && Object.keys(m.reactions).length > 0 && (
                 <button type="button" onClick={(e) => { e.stopPropagation(); if (uid && m.reactions?.[uid]) react(m.id, m.reactions[uid]); }}
@@ -392,6 +419,17 @@ function ChatPage() {
         )}
       </div>
 
+      {actionMsg && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-foreground/40 p-6" onClick={() => setActionMsg(null)}>
+          <div className="w-full max-w-xs overflow-hidden rounded-3xl bg-background text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="line-clamp-2 border-b px-4 py-3 text-sm text-muted-foreground">{actionMsg.content}</p>
+            {actionMsg.sender_id === uid && (
+              <button onClick={() => removeMsg(actionMsg, true)} className="w-full border-b py-3 text-sm font-semibold text-destructive active:bg-muted">Unsend for everyone</button>
+            )}
+            <button onClick={() => removeMsg(actionMsg, false)} className="w-full border-b py-3 text-sm font-medium active:bg-muted">Remove for me</button>
+            <button onClick={() => setActionMsg(null)} className="w-full py-3 text-sm active:bg-muted">Cancel</button>
+          </div>
+        </div>, document.body)}
       <div className={`relative border-t bg-background px-3 pt-2 ${kbOpen ? "pb-2" : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"}`}>
         {!atBottom && (
           <button type="button" aria-label="Scroll to latest" onClick={() => scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" })}
