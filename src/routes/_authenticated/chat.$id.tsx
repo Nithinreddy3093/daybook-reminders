@@ -12,7 +12,6 @@ import { ChatChecklist, type ChecklistItem } from "@/components/ChatChecklist";
 import { fileUrl, reactMessage, sendFile, getThread, markRead, respondPlan, sendMessage, sendPlan, type Message } from "@/lib/messages";
 import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
-import { playSound } from "@/lib/sounds";
 import { ContactCard, PROFILE_LINK } from "@/components/ContactCard";
 import { createPortal } from "react-dom";
 import { useScrollLock } from "@/lib/use-sheet";
@@ -137,7 +136,7 @@ function ChatPage() {
     await Promise.all(list.map(async (raw) => {
       if (raw.size > 50 * 1024 * 1024) { toast.error(`${raw.name} is over 50 MB`); return; }
       setUploading((n) => n + 1);
-      try { const f = await shrinkImage(raw); await sendFile(id, f); playSound("sent"); }
+      try { const f = await shrinkImage(raw); await sendFile(id, f); }
       catch { toast.error(`Could not send ${raw.name}`); }
       finally { setUploading((n) => n - 1); }
     }));
@@ -176,7 +175,7 @@ function ChatPage() {
     qc.setQueryData<Thread>(key, (old) => old ? { ...old, messages: [...old.messages, temp] } : old);
     setText("");
     ping(false);
-    playSound("sent");
+   
     tap();
     if (input.current) { input.current.style.height = "auto"; input.current.focus(); }
     try { await sendMessage(id, content); }
@@ -193,7 +192,7 @@ function ChatPage() {
   const proposePlan = async () => {
     if (!pTitle.trim()) return;
     const at = pWhen ? new Date(pWhen).toISOString() : null;
-    try { await sendPlan(id, { title: pTitle, due_at: at, remind_at: at }); playSound("sent"); setPlanOpen(false); setPTitle(""); setPWhen(""); }
+    try { await sendPlan(id, { title: pTitle, due_at: at, remind_at: at }); setPlanOpen(false); setPTitle(""); setPWhen(""); }
     catch { toast.error("Could not send plan"); }
   };
   const aiFn = useServerFn(createCollabPlan);
@@ -212,7 +211,7 @@ function ChatPage() {
   };
   const sendDraft = async () => {
     if (!draft) return;
-    try { await sendPlan(id, draft); playSound("sent"); toast("Plan sent — waiting for their approval"); setDraft(null); setAiText(""); setAiOpen(false); }
+    try { await sendPlan(id, draft); toast("Plan sent — waiting for their approval"); setDraft(null); setAiText(""); setAiOpen(false); }
     catch { toast.error("Could not send plan"); }
   };
   const answer = async (mid: string, ok: boolean) => {
@@ -227,7 +226,7 @@ function ChatPage() {
   const createList = async () => {
     const items = lItems.split("\n");
     if (!items.some((t) => t.trim())) return;
-    try { await sendChecklist(id, lTitle, items); playSound("sent"); setListOpen(false); setLTitle(""); setLItems(""); }
+    try { await sendChecklist(id, lTitle, items); setListOpen(false); setLTitle(""); setLItems(""); }
     catch { toast.error("Could not send checklist"); }
   };
   const patchItems = (mid: string, fn: (items: ChecklistItem[]) => ChecklistItem[]) =>
@@ -283,7 +282,7 @@ function ChatPage() {
         const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
         const f = new File(r.chunks, `voice-${Date.now()}.${ext}`, { type: mime.split(";")[0] || "audio/webm" });
         setUploading((n) => n + 1);
-        try { await sendFile(id, f); playSound("sent"); } catch { toast.error("Voice note not sent"); }
+        try { await sendFile(id, f); } catch { toast.error("Voice note not sent"); }
         finally { setUploading((n) => n - 1); }
       };
       rec.current = r; mr.start(); tap(); setRecording(true);
