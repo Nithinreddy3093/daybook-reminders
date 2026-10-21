@@ -25,10 +25,11 @@ export function ActivityBell() {
 
   useEffect(() => {
     let ch: ReturnType<typeof supabase.channel> | undefined;
+    let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
       const uid = data.user?.id;
-      if (!uid) return;
-      ch = supabase.channel("activity-" + uid)
+      if (!uid || cancelled) return;
+      ch = supabase.channel(`activity-${uid}-${Math.random().toString(36).slice(2)}`)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "follows", filter: `following_id=eq.${uid}` }, async (p) => {
           for (const k of FOLLOW_KEYS) qc.invalidateQueries({ queryKey: [k] });
           const fid = (p.new as { follower_id?: string }).follower_id;
@@ -42,7 +43,7 @@ export function ActivityBell() {
         .on("postgres_changes", { event: "DELETE", schema: "public", table: "follows" }, () => { for (const k of FOLLOW_KEYS) qc.invalidateQueries({ queryKey: [k] }); })
         .subscribe();
     });
-    return () => { if (ch) supabase.removeChannel(ch); };
+    return () => { cancelled = true; if (ch) supabase.removeChannel(ch); };
   }, [qc]);
 
   const n = followers.filter((f) => new Date(f.followed_at).getTime() > seen).length;
