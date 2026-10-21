@@ -61,8 +61,8 @@ function ChatPage() {
   const input = useRef<HTMLTextAreaElement>(null);
   const first = useRef(true);
 
-  const msgs: Thread["messages"] = (thread.data?.messages ?? []).filter((m) => !(uid && (m as Message).hidden_for?.includes(uid)));
   const uid = thread.data?.uid;
+  const msgs: Thread["messages"] = (thread.data?.messages ?? []).filter((m) => !(uid && (m as Message).hidden_for?.includes(uid)));
   // Follow the phone's visible area so the keyboard sits right under the composer.
   const [vvh, setVvh] = useState<number | null>(null);
   const [kbOpen, setKbOpen] = useState(false);
