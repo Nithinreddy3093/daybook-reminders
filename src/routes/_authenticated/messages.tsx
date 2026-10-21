@@ -39,7 +39,7 @@ function InboxPage() {
   const { data, isLoading } = useQuery({ queryKey: ["inbox"], queryFn: getInbox });
   const [q, setQ] = useState("");
   useEffect(() => {
-    const ch = supabase.channel("inbox-page")
+    const ch = supabase.channel(`inbox-page-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => qc.invalidateQueries({ queryKey: ["inbox"] }))
       .subscribe();
     return () => { supabase.removeChannel(ch); };

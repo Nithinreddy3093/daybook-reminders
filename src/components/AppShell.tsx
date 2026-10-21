@@ -140,7 +140,7 @@ function InboxLink() {
   useEffect(() => {
     let uid: string | undefined;
     supabase.auth.getUser().then(({ data }) => { uid = data.user?.id; });
-    const ch = supabase.channel("unread-badge")
+    const ch = supabase.channel(`unread-badge-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, async (p) => {
         qc.invalidateQueries({ queryKey: ["unread"] });
         const row = p.new as { recipient_id?: string; sender_id?: string; content?: string } | undefined;
