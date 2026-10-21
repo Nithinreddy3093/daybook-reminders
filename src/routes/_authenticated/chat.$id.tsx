@@ -82,7 +82,7 @@ function ChatPage() {
 
   // Realtime: patch the cache directly instead of refetching (faster, no flicker).
   useEffect(() => {
-    const ch = supabase.channel(`chat-${id}`)
+    const ch = supabase.channel(`chat-${id}-${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
         if (p.eventType === "DELETE") {
           const gone = (p.old as { id?: string })?.id;
