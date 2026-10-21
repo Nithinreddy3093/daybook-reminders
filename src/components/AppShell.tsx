@@ -137,10 +137,20 @@ function InboxLink() {
     let uid: string | undefined;
     supabase.auth.getUser().then(({ data }) => { uid = data.user?.id; });
     const ch = supabase.channel("unread-badge")
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, async (p) => {
         qc.invalidateQueries({ queryKey: ["unread"] });
-        const row = p.new as { recipient_id?: string } | undefined;
-        if (p.eventType === "INSERT" && uid && row?.recipient_id === uid) playSound("received");
+        const row = p.new as { recipient_id?: string; sender_id?: string; content?: string } | undefined;
+        if (p.eventType !== "INSERT" || !uid || row?.recipient_id !== uid || !row.sender_id) return;
+        if (window.location.pathname === `/chat/${row.sender_id}` && document.visibilityState === "visible") return;
+        playSound("received");
+        const { data: prof } = await supabase.from("profiles").select("display_name, username").eq("id", row.sender_id).maybeSingle();
+        const name = prof?.display_name || prof?.username || "New message";
+        const body = String(row.content ?? "").slice(0, 100);
+        const to = `/chat/${row.sender_id}`;
+        toast(name, { description: body, action: { label: "Open", onClick: () => { window.location.href = to; } } });
+        if (document.visibilityState !== "visible" && "Notification" in window && Notification.permission === "granted") {
+          try { const n = new Notification(`💬 ${name}`, { body, icon: "/icon-512.png", tag: `chat-${row.sender_id}` }); n.onclick = () => { window.focus(); window.location.href = to; }; } catch { /* ignore */ }
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };

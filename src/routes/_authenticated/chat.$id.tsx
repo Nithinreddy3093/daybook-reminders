@@ -14,6 +14,8 @@ import { getProfile, liveStreak } from "@/lib/social";
 import { Avatar } from "@/components/ProfileCard";
 import { playSound } from "@/lib/sounds";
 import { ContactCard, PROFILE_LINK } from "@/components/ContactCard";
+import { createPortal } from "react-dom";
+import { useScrollLock } from "@/lib/use-sheet";
 
 export const Route = createFileRoute("/_authenticated/chat/$id")({
   head: () => ({
@@ -509,11 +511,23 @@ function AttachmentBubble({ a, mine, caption }: { a: NonNullable<Message["attach
         </a>
       )}
       {caption && <p className={`px-2 text-sm ${mine ? "text-right" : ""}`}>{caption}</p>}
-      {big && url.data && (
-        <button type="button" onClick={() => setBig(false)} aria-label="Close photo" className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/90 p-4">
-          <img src={url.data} alt={a.name} className="max-h-full max-w-full rounded-xl" />
-        </button>
-      )}
+      {big && url.data && <PhotoViewer src={url.data} alt={a.name} onClose={() => setBig(false)} />}
     </div>
+  );
+}
+
+function PhotoViewer({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useScrollLock(true);
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+  return createPortal(
+    <div role="dialog" aria-modal="true" onClick={onClose} className="fixed inset-0 z-[100] grid place-items-center bg-background/95 p-4" style={{ height: "100dvh" }}>
+      <button type="button" onClick={onClose} aria-label="Close photo" className="absolute right-4 top-[calc(env(safe-area-inset-top)+1rem)] rounded-full bg-muted p-2"><X className="h-5 w-5" /></button>
+      <img src={src} alt={alt} onClick={(e) => e.stopPropagation()} className="max-h-[85dvh] max-w-[92vw] rounded-xl object-contain" />
+    </div>,
+    document.body,
   );
 }

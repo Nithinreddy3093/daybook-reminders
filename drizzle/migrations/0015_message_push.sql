@@ -1,0 +1,2 @@
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS pushed_at timestamptz;
+CREATE INDEX IF NOT EXISTS messages_push_pending_idx ON public.messages (created_at) WHERE pushed_at IS NULL AND read_at IS NULL;

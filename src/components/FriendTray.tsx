@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ProfileCard";
 export function FriendTray() {
   const { data = [] } = useQuery({ queryKey: ["following"], queryFn: getFollowing });
   return (
-    <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-1">
+    <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-1">
       <Link to="/friends" className="flex w-16 shrink-0 flex-col items-center gap-1 text-xs">
         <div className="flex h-[62px] w-[62px] items-center justify-center rounded-full border-2 border-dashed"><Plus className="h-5 w-5" /></div>
         <span className="text-muted-foreground">Find</span>
