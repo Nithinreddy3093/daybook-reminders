@@ -136,7 +136,7 @@ function MemoriesPage() {
           <Search className="h-4 w-4 text-muted-foreground" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search captions, files, #tags" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
         </label>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
           {FILTERS.map((f) => (
             <button key={f} onClick={() => setFilter(f)} className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium ${filter === f ? "bg-foreground text-background" : "bg-muted"}`}>{f}</button>
           ))}

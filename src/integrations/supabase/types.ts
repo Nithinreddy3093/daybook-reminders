@@ -98,6 +98,7 @@ export type Database = {
           kind: string
           plan: Json | null
           plan_status: string | null
+          pushed_at: string | null
           reactions: Json
           read_at: string | null
           recipient_id: string
@@ -111,6 +112,7 @@ export type Database = {
           kind?: string
           plan?: Json | null
           plan_status?: string | null
+          pushed_at?: string | null
           reactions?: Json
           read_at?: string | null
           recipient_id: string
@@ -124,6 +126,7 @@ export type Database = {
           kind?: string
           plan?: Json | null
           plan_status?: string | null
+          pushed_at?: string | null
           reactions?: Json
           read_at?: string | null
           recipient_id?: string

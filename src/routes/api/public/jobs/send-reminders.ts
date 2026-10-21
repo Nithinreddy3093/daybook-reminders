@@ -34,7 +34,31 @@ export const Route = createFileRoute("/api/public/jobs/send-reminders")({
           }
           await supabaseAdmin.from("tasks").update({ push_sent_for: t.remind_at }).eq("id", t.id);
         }
-        return Response.json({ due: due.length, sent });
+        // New unread messages → push to recipient
+        const msgSince = new Date(now.getTime() - 15 * 60_000).toISOString();
+        const { data: msgs } = await supabaseAdmin
+          .from("messages")
+          .select("id, sender_id, recipient_id, content")
+          .is("pushed_at", null).is("read_at", null)
+          .gte("created_at", msgSince).limit(200);
+        const list = msgs ?? [];
+        if (list.length) {
+          await supabaseAdmin.from("messages").update({ pushed_at: now.toISOString() }).in("id", list.map((m) => m.id));
+          const senders = [...new Set(list.map((m) => m.sender_id))];
+          const { data: ps } = await supabaseAdmin.from("profiles").select("id, display_name, username").in("id", senders);
+          const name = new Map((ps ?? []).map((p) => [p.id, p.display_name || p.username || "Someone"]));
+          for (const m of list) {
+            const { data: subs } = await supabaseAdmin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", m.recipient_id);
+            for (const s of subs ?? []) {
+              try {
+                const r = await sendPush(s, { title: `💬 ${name.get(m.sender_id) ?? "New message"}`, body: String(m.content).slice(0, 120), url: `/chat/${m.sender_id}`, tag: `chat-${m.sender_id}`, sound: "received" });
+                if (r === "gone") await supabaseAdmin.from("push_subscriptions").delete().eq("id", s.id);
+                if (r === "ok") sent++;
+              } catch { /* keep going */ }
+            }
+          }
+        }
+        return Response.json({ due: due.length, messages: list.length, sent });
       },
     },
   },
