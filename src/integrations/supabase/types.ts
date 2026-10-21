@@ -94,6 +94,7 @@ export type Database = {
           attachment: Json | null
           content: string
           created_at: string
+          hidden_for: string[]
           id: string
           kind: string
           plan: Json | null
@@ -108,6 +109,7 @@ export type Database = {
           attachment?: Json | null
           content: string
           created_at?: string
+          hidden_for?: string[]
           id?: string
           kind?: string
           plan?: Json | null
@@ -122,6 +124,7 @@ export type Database = {
           attachment?: Json | null
           content?: string
           created_at?: string
+          hidden_for?: string[]
           id?: string
           kind?: string
           plan?: Json | null
@@ -227,6 +230,7 @@ export type Database = {
           push_sent_for: string | null
           recurrence: string
           remind_at: string | null
+          reminded_for: string | null
           title: string
           user_id: string
         }
@@ -241,6 +245,7 @@ export type Database = {
           push_sent_for?: string | null
           recurrence?: string
           remind_at?: string | null
+          reminded_for?: string | null
           title: string
           user_id?: string
         }
@@ -255,6 +260,7 @@ export type Database = {
           push_sent_for?: string | null
           recurrence?: string
           remind_at?: string | null
+          reminded_for?: string | null
           title?: string
           user_id?: string
         }
@@ -287,6 +293,7 @@ export type Database = {
           id: string
         }[]
       }
+      hide_message: { Args: { _msg: string }; Returns: undefined }
       incoming_friend_requests: {
         Args: never
         Returns: {

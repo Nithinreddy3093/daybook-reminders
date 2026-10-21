@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PublicProfile } from "@/lib/social";
 
-export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string; kind?: string; plan?: { title: string; due_at?: string | null; remind_at?: string | null; notes?: string | null } | null; plan_status?: string | null; attachment?: Attachment | null; reactions?: Record<string, string> | null };
+export type Message = { id: string; sender_id: string; recipient_id: string; content: string; read_at: string | null; created_at: string; kind?: string; plan?: { title: string; due_at?: string | null; remind_at?: string | null; notes?: string | null } | null; plan_status?: string | null; attachment?: Attachment | null; reactions?: Record<string, string> | null; hidden_for?: string[] | null };
 
 /** React to a message (toggle). Does not create a new message. */
 export async function reactMessage(id: string, emoji: string) {
@@ -19,6 +19,7 @@ export async function getInbox() {
   if (error) throw error;
   const latest = new Map<string, { last: Message; unread: number; pendingPlans: number }>();
   for (const m of (data ?? []) as Message[]) {
+    if (m.hidden_for?.includes(uid)) continue;
     const other = m.sender_id === uid ? m.recipient_id : m.sender_id;
     const e = latest.get(other) ?? { last: m, unread: 0, pendingPlans: 0 };
     if (m.recipient_id === uid && m.kind === "plan" && m.plan_status === "pending") e.pendingPlans++;

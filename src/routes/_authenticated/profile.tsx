@@ -64,6 +64,7 @@ function ProfilePage() {
   const [pushBusy, setPushBusy] = useState(false);
   const [sound, setSound] = useState(true);
   const [typingOn, setTypingOn] = useState(true);
+  const [msgSound, setMsgSound] = useState(true);
   const { data: myStreak = 0 } = useQuery({ queryKey: ["my-streak"], queryFn: getMyStreak });
   const avatar = useAvatar(profile?.id);
   const { data: shares = [] } = useQuery({ queryKey: ["my-shares"], queryFn: myShares });
@@ -83,6 +84,7 @@ function ProfilePage() {
     setTheme(readTheme());
     setSound(localStorage.getItem("keep-sound") !== "off");
     setTypingOn(localStorage.getItem("keep-typing") !== "off");
+    setMsgSound(localStorage.getItem("keep-msg-sound") !== "off");
     setPerm(pushSupported() ? Notification.permission : "Notification" in window ? Notification.permission : "unsupported");
     currentSubscription().then((s) => setPushOn(!!s)).catch(() => {});
   }, []);
@@ -324,6 +326,10 @@ function ProfilePage() {
         <label className="flex items-center justify-between gap-4 border-t pt-3">
           <span className="text-sm"><b>Opening sound</b><span className="block text-muted-foreground">Soft chime with the opening animation.</span></span>
           <input type="checkbox" role="switch" checked={sound} onChange={(e) => { setSound(e.target.checked); localStorage.setItem("keep-sound", e.target.checked ? "on" : "off"); }} className="h-6 w-11 shrink-0 accent-primary" />
+        </label>
+        <label className="flex items-center justify-between gap-4 border-t pt-3">
+          <span className="text-sm"><b>Message sounds</b><span className="block text-muted-foreground">Chime when a friend messages you.</span></span>
+          <input type="checkbox" role="switch" checked={msgSound} onChange={(e) => { setMsgSound(e.target.checked); localStorage.setItem("keep-msg-sound", e.target.checked ? "on" : "off"); }} className="h-6 w-11 shrink-0 accent-primary" />
         </label>
         <label className="flex items-center justify-between gap-4 border-t pt-3">
           <span className="text-sm"><b>Show when I'm typing</b><span className="block text-muted-foreground">Friends see typing dots while you write.</span></span>
