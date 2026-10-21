@@ -55,7 +55,7 @@ export async function getThread(other: string) {
 export async function sendMessage(to: string, content: string) {
   const text = content.trim().slice(0, 2000);
   if (!text) return;
-  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: text }.select("id").single();
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: text }).select("id").single();
   if (error) throw error;
   ping(row?.id);
 }
@@ -68,7 +68,7 @@ export async function markRead(from: string) {
 export async function sendPlan(to: string, plan: { title: string; due_at: string | null; remind_at: string | null; notes?: string | null }) {
   const title = plan.title.trim().slice(0, 200);
   if (!title) return;
-  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `📅 ${title}`, kind: "plan", plan }.select("id").single();
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `📅 ${title}`, kind: "plan", plan }).select("id").single();
   if (error) throw error;
   ping(row?.id);
 }
@@ -87,7 +87,7 @@ export async function sendFile(to: string, file: File, caption = "") {
   if (up.error) throw up.error;
   const icon = file.type.startsWith("image/") ? "📷 Photo" : file.type.startsWith("video/") ? "🎬 Video" : file.type.startsWith("audio/") ? "🎤 Voice note" : `📎 ${file.name}`;
   const attachment: Attachment = { path, name: file.name, type: file.type, size: file.size };
-  const { data: row, error } = await supabase.from("messages").insert({ sender_id: uid, recipient_id: to, content: (caption.trim() || icon).slice(0, 2000), kind: "file", attachment }.select("id").single();
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: uid, recipient_id: to, content: (caption.trim() || icon).slice(0, 2000), kind: "file", attachment }).select("id").single();
   if (error) throw error;
   ping(row?.id);
 }
@@ -106,7 +106,7 @@ export async function sendChecklist(to: string, title: string, items: string[]) 
   const list = items.map((t) => t.trim()).filter(Boolean).slice(0, 50);
   if (!list.length) return;
   const name = title.trim().slice(0, 120) || "Checklist";
-  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `✅ ${name}`, kind: "checklist", plan: { title: name, items: list.map((text) => ({ text })) } }.select("id").single();
+  const { data: row, error } = await supabase.from("messages").insert({ sender_id: await me(), recipient_id: to, content: `✅ ${name}`, kind: "checklist", plan: { title: name, items: list.map((text) => ({ text })) } }).select("id").single();
   if (error) throw error;
   ping(row?.id);
 }
